@@ -10,13 +10,14 @@ function installStyle(){
   style.id="wheelSectorFixStyle";
   style.textContent=`
 :root{
-  --wheel-unified:rgba(199,222,215,.46);
-  --wheel-divider:rgba(83,111,101,.16);
+  /* 统一暖米白：不发绿、不偏黄，接近象牙白 / 浅卡其 */
+  --wheel-unified:rgba(239,233,220,.76);
+  --wheel-divider:rgba(143,128,105,.18);
 }
 @media(prefers-color-scheme:dark){
   :root{
-    --wheel-unified:rgba(74,102,94,.46);
-    --wheel-divider:rgba(255,255,255,.10);
+    --wheel-unified:rgba(107,96,80,.42);
+    --wheel-divider:rgba(236,226,208,.12);
   }
 }
 `;
@@ -67,7 +68,7 @@ function applyWheelEnhancements(){
   paths.forEach(function(path){
     path.setAttribute("fill","var(--wheel-unified)");
     path.setAttribute("stroke","var(--wheel-divider)");
-    path.setAttribute("stroke-width","1.25");
+    path.setAttribute("stroke-width","1.1");
     path.setAttribute("stroke-linejoin","round");
   });
 
