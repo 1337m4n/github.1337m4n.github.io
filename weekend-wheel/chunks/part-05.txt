@@ -1,0 +1,189 @@
+cument.createElement("button");
+    down.type="button";
+    down.title="下移";
+    down.textContent="↓";
+    down.disabled=(i===items.length-1);
+    down.addEventListener("click",function(){
+      if(i===items.length-1)return;
+      var tmp=items[i+1];items[i+1]=items[i];items[i]=tmp;
+      autoSave();renderEditor();resetRound();
+    });
+
+    var del=document.createElement("button");
+    del.type="button";
+    del.className="danger";
+    del.textContent="删除";
+    del.addEventListener("click",function(){
+      if(items.length<=2){
+        alert("至少保留 2 个项目。");
+        return;
+      }
+      items.splice(i,1);
+      autoSave();
+      renderEditor();
+      resetRound();
+    });
+
+    actions.appendChild(up);
+    actions.appendChild(down);
+    actions.appendChild(del);
+
+    row.appendChild(num);
+    row.appendChild(input);
+    row.appendChild(actions);
+    editorEl.appendChild(row);
+  });
+}
+
+function renderHistory(){
+  historyEl.innerHTML="";
+  if(history.length===0){
+    var e=document.createElement("div");
+    e.className="hist";
+    e.innerHTML='<span style="color:var(--muted)">还没有记录</span>';
+    historyEl.appendChild(e);
+    return;
+  }
+  history.slice(-5).reverse().forEach(function(idx,k){
+    var row=document.createElement("div");
+    row.className="hist";
+    var a=document.createElement("span");
+    a.textContent=items[idx] || "已删除项目";
+    var b=document.createElement("span");
+    b.style.color="var(--muted)";
+    b.textContent="#"+(history.length-k);
+    row.appendChild(a);row.appendChild(b);
+    historyEl.appendChild(row);
+  });
+}
+
+function setRotorAngle(deg){
+  rotor.style.transform="rotate("+deg+"deg)";
+  updateLabelOrientation(deg);
+}
+
+function normalize(d){ return ((d%360)+360)%360; }
+function normalizeSigned(d){
+  var n=normalize(d);
+  return n>180 ? n-360 : n;
+}
+
+/*
+  根据“当前轮盘角度 + 扇区基础角度”判断文字在屏幕上的实际方向。
+  目标：
+  - 文字始终沿扇区中轴线；
+  - 但绝不倒着读；
+  - 转盘停在任何角度都能直接看懂。
+*/
+function updateLabelOrientation(rotorAngle){
+  labelNodes.forEach(function(node){
+    var screenCenter=normalize(node.baseCenter + rotorAngle);
+
+    /*
+      沿半径方向的文字基础角度：
+      0° 扇区在正上方，所以文字方向要减 90°。
+    */
+    var textAngle=screenCenter - 90;
+    var signed=normalizeSigned(textAngle);
+
+    /*
+      如果文字方向落在“倒置半平面”，翻转 180°。
+      最终视觉方向总保持在 -90° ~ +90° 范围内。
+    */
+    if(signed > 90 || signed < -90){
+      textAngle += 180;
+    }
+
+    /*
+      因为 group 本身属于正在旋转的 rotor，
+      为了让“屏幕上的最终朝向”正确，需要抵消 rotorAngle。
+    */
+    var localRotation=textAngle - rotorAngle;
+    node.group.setAttribute(
+      "transform",
+      "translate("+node.x+" "+node.y+") rotate("+localRotation+")"
+    );
+  });
+}
+
+
+function updateRemain(){
+  remainEl.textContent="当前 "+active.length+" 个候选";
+  spinBtn.disabled=spinning || active.length===0;
+  spinBtn.textContent=active.length ? (spinning?"转动中":"开摇") : "完成";
+}
+
+function resetRound(){
+  active=items.map(function(_,i){return i;});
+  history=[];
+  spinning=false;
+  rotor.classList.remove("is-spinning");
+  angle=0;
+  lastTickSector=-1;
+  setRotorAngle(0);
+  resultEl.textContent="等你开摇";
+  buildWheel();
+  renderHistory();
+  updateRemain();
+}
+
+function bumpPointer(){
+  if(!pointerAssembly) return;
+
+  pointerAssembly.classList.remove("bump");
+
+  /* 强制重启动画，确保每跨一个扇区都像一个整体总成一样弹一下 */
+  void pointerAssembly.offsetWidth;
+
+  pointerAssembly.classList.add("bump");
+}
+
+function spin(){
+  if(spinning || active.length===0) return;
+
+  spinning=true;
+  rotor.classList.add("is-spinning");
+  updateRemain();
+
+  var n=active.length;
+  var slice=360/n;
+  var chosenPos=Math.floor(Math.random()*n);
+  var chosenIdx=active[chosenPos];
+
+  /* chosenPos 的中心在 chosenPos*slice；右侧指针对应 +90° */
+  var desired=normalize(90-chosenPos*slice);
+  var now=normalize(angle);
+  var delta=normalize(desired-now);
+
+  /* 6~8 圈，持续时间略随机，避免每次机械一致 */
+  var turns=6+Math.floor(Math.random()*3);
+  var totalDelta=turns*360+delta;
+  var startAngle=angle;
+  var target=startAngle+totalDelta;
+  var duration=4700+Math.random()*900;
+  var startTime=performance.now();
+  lastTickSector=-1;
+
+  /* 更像实体转盘的减速：前段迅速加速感，中后段长尾减速 */
+  function progress(t){
+    /* easeOutQuint + 轻微尾部压缩，阻尼比普通 cubic-bezier 更长 */
+    var q=1-Math.pow(1-t,5);
+    return q;
+  }
+
+  function frame(nowTime){
+    var t=Math.min(1,(nowTime-startTime)/duration);
+    var p=progress(t);
+    var current=startAngle+totalDelta*p;
+    angle=current;
+    setRotorAngle(current);
+
+    /* 每越过一个分区，让指针轻轻“哒”一下 */
+    var sector=Math.floor(normalize(current)/slice);
+    if(sector!==lastTickSector){
+      if(t>.08) bumpPointer();
+      lastTickSector=sector;
+    }
+
+    if(t<1){
+      requestA
