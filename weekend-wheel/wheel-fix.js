@@ -10,14 +10,60 @@ function installStyle(){
   style.id="wheelSectorFixStyle";
   style.textContent=`
 :root{
-  /* 统一暖米白：不发绿、不偏黄，接近象牙白 / 浅卡其 */
-  --wheel-unified:rgba(239,233,220,.76);
-  --wheel-divider:rgba(143,128,105,.18);
+  /* 轮盘扇区：真正纯白，不带任何色偏 */
+  --wheel-unified:#ffffff;
+  --wheel-divider:rgba(43,53,49,.085);
 }
-@media(prefers-color-scheme:dark){
-  :root{
-    --wheel-unified:rgba(107,96,80,.42);
-    --wheel-divider:rgba(236,226,208,.12);
+
+/* 毛玻璃质感放在轮盘外壳，而不是给扇区染色 */
+.wheelPanel{
+  background:rgba(255,255,255,.56)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(145%)!important;
+  backdrop-filter:blur(22px) saturate(145%)!important;
+  border:1px solid rgba(255,255,255,.82)!important;
+  box-shadow:
+    0 18px 48px rgba(37,49,44,.08),
+    inset 0 1px 0 rgba(255,255,255,.94)!important;
+}
+
+.wheelShell{
+  background:
+    radial-gradient(circle at 30% 20%,rgba(255,255,255,.98),rgba(255,255,255,.70) 36%,rgba(255,255,255,.48) 72%,rgba(255,255,255,.34))!important;
+  -webkit-backdrop-filter:blur(28px) saturate(150%)!important;
+  backdrop-filter:blur(28px) saturate(150%)!important;
+  border:1px solid rgba(255,255,255,.96)!important;
+  box-shadow:
+    0 24px 56px rgba(36,48,43,.11),
+    0 6px 18px rgba(36,48,43,.055),
+    inset 0 2px 0 rgba(255,255,255,.98),
+    inset 0 -10px 22px rgba(78,92,86,.045),
+    inset 0 0 0 1px rgba(255,255,255,.56)!important;
+}
+
+#wheelRotor{
+  filter:drop-shadow(0 8px 16px rgba(39,51,46,.07))!important;
+}
+
+.rim{
+  box-shadow:
+    inset 0 0 0 1px rgba(70,82,77,.055),
+    inset 0 0 0 6px rgba(255,255,255,.30),
+    0 1px 0 rgba(255,255,255,.96)!important;
+}
+
+@media(max-width:680px){
+  .wheelPanel{
+    -webkit-backdrop-filter:blur(18px) saturate(140%)!important;
+    backdrop-filter:blur(18px) saturate(140%)!important;
+  }
+  .wheelShell{
+    -webkit-backdrop-filter:blur(20px) saturate(140%)!important;
+    backdrop-filter:blur(20px) saturate(140%)!important;
+    box-shadow:
+      0 16px 36px rgba(36,48,43,.09),
+      0 4px 12px rgba(36,48,43,.04),
+      inset 0 2px 0 rgba(255,255,255,.98),
+      inset 0 -8px 18px rgba(78,92,86,.035)!important;
   }
 }
 `;
@@ -68,7 +114,7 @@ function applyWheelEnhancements(){
   paths.forEach(function(path){
     path.setAttribute("fill","var(--wheel-unified)");
     path.setAttribute("stroke","var(--wheel-divider)");
-    path.setAttribute("stroke-width","1.1");
+    path.setAttribute("stroke-width","0.9");
     path.setAttribute("stroke-linejoin","round");
   });
 
