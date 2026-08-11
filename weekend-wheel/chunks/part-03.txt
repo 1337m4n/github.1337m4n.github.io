@@ -1,0 +1,158 @@
+or">
+          <svg id="wheelSvg" viewBox="0 0 600 600" aria-label="随机活动转盘"></svg>
+        </div>
+        <div class="rim"></div>
+        <div id="pointerAssembly" class="pointerAssembly" aria-hidden="true">
+          <div class="pointerNeedle"></div>
+          <div class="pointerWrap"><div id="pointer" class="pointer"></div></div>
+        </div>
+        <div class="centerDisc">
+          <button id="spinBtn" type="button">开摇</button>
+        </div>
+      </div>
+      <div class="helper">文字会随停靠位置自动翻正；右侧同色细针精确标记最终落点。</div>
+    </section>
+
+    <aside class="panel sidePanel">
+      <div class="resultBox">
+        <div class="kicker">本轮结果</div>
+        <div id="result">等你开摇</div>
+        <div id="remain">当前 12 个候选</div>
+      </div>
+
+      <div class="controls">
+        <button id="resetBtn" type="button">重置本轮</button>
+        <button id="undoBtn" type="button">撤回上次</button>
+      </div>
+
+      <div style="margin-top:16px">
+        <label class="switchLine">
+          <input id="noRepeat" type="checkbox">
+          抽中过的项目本轮不再出现
+        </label>
+      </div>
+
+      <div class="sectionTitle">最近抽到</div>
+      <div id="history" class="history"></div>
+
+      <div class="sectionTitle">数据管理</div>
+      <div class="controls">
+        <button id="saveBtn" class="primary" type="button">保存当前项目</button>
+        <button id="exportBtn" type="button">导出配置</button>
+        <label class="btn" for="importFile">导入配置</label>
+        <input id="importFile" class="fileInput" type="file" accept=".json,application/json">
+      </div>
+      <div class="note" style="margin-top:10px">
+        当前设备可直接保存到浏览器。换手机、Mac 或 Windows 时，导出 JSON 后再导入即可。
+      </div>
+    </aside>
+  </div>
+
+  <section class="panel editorPanel">
+    <div class="editorHead">
+      <div>
+        <div class="sectionTitle" style="margin:0">编辑抽取内容</div>
+        <div class="editorHint">直接修改文字即可；新增、删除或调整顺序后，转盘会立即同步。</div>
+      </div>
+      <div id="editorCount" class="editorCount">12 项</div>
+    </div>
+
+    <div class="toolbar">
+      <button id="addBtn" class="primary" type="button">＋ 新增一项</button>
+      <button id="batchBtn" type="button">批量粘贴</button>
+      <button id="shuffleBtn" type="button">随机打乱顺序</button>
+      <button id="defaultBtn" type="button">恢复默认 12 项</button>
+    </div>
+
+    <div id="batchBox" class="batchBox">
+      <div class="note" style="margin-bottom:8px">
+        每行一个项目。点“应用”后会直接替换当前全部抽取内容。
+      </div>
+      <textarea id="batchText" placeholder="例如：
+🏎️ 赛车＋落日
+🔐 楼兰古墓2
+🌊 安吉漂流"></textarea>
+      <div class="controls" style="margin-top:10px">
+        <button id="batchApplyBtn" class="primary" type="button">应用到转盘</button>
+        <button id="batchCancelBtn" type="button">取消</button>
+      </div>
+    </div>
+
+    <div id="editor"></div>
+  </section>
+
+  <div class="footer">纯离线运行 · 不请求网络 · 不上传数据</div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var defaults = [
+  "🏎️ 赛车＋落日",
+  "🔐 五角场《楼兰古墓2》",
+  "🌊 安吉漂流",
+  "🌲 共青森林公园＋烧烤",
+  "🧗 双人抱石 / 攀岩",
+  "🏹 室内射箭",
+  "🌌 上海天文馆＋滴水湖",
+  "🏕️ 露营＋烧烤＋看星星",
+  "🎤 K歌＋按摩＋夜宵",
+  "🎭 马戏 / 沉浸式演出",
+  "🎢 欢乐谷全天",
+  "🏺 陶艺 / 银戒 DIY"
+];
+
+var items = loadSaved() || defaults.slice();
+var active = [];
+var history = [];
+var spinning = false;
+var angle = 0;
+var lastTickSector = -1;
+var labelNodes = [];
+
+var svg = document.getElementById("wheelSvg");
+var rotor = document.getElementById("wheelRotor");
+var spinBtn = document.getElementById("spinBtn");
+var pointer = document.getElementById("pointer");
+var pointerAssembly = document.getElementById("pointerAssembly");
+var resultEl = document.getElementById("result");
+var remainEl = document.getElementById("remain");
+var historyEl = document.getElementById("history");
+var editorEl = document.getElementById("editor");
+var noRepeatEl = document.getElementById("noRepeat");
+
+function loadSaved(){
+  try{
+    var raw = localStorage.getItem("weekendWheelItemsV3");
+    if(!raw) return null;
+    var arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.length >= 2 ? arr : null;
+  }catch(e){ return null; }
+}
+
+function saveLocal(){
+  try{
+    localStorage.setItem("weekendWheelItemsV3", JSON.stringify(items));
+    alert("已保存到当前浏览器。");
+  }catch(e){
+    alert("当前浏览器不允许本地保存，请使用“导出配置”。");
+  }
+}
+
+function autoSave(){
+  try{
+    localStorage.setItem("weekendWheelItemsV3", JSON.stringify(items));
+  }catch(e){}
+}
+
+
+function polar(cx,cy,r,deg){
+  var rad=(deg-90)*Math.PI/180;
+  return {x:cx+r*Math.cos(rad),y:cy+r*Math.sin(rad)};
+}
+
+function arcPath(cx,cy,r,startDeg,endDeg){
+  var start=polar(cx,cy,r,endDeg);
+  var end=polar(cx,cy,r,startDeg);
+  var large=(endDeg-startDeg)
