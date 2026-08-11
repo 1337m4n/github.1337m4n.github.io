@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "周末去哪儿 · 随机转盘",
+  "short_name": "周末去哪儿",
+  "description": "一个可编辑、可离线使用的周末活动随机转盘。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef2ef",
+  "theme_color": "#eef2ef",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
