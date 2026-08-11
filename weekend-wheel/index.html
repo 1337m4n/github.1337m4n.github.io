@@ -12,13 +12,46 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
-  const parts=["./chunks/part-00.txt","./chunks/part-01.txt","./chunks/part-02.txt","./chunks/part-03.txt","./chunks/part-04.txt","./chunks/part-05.txt","./chunks/part-06.txt"];
+  const parts=[
+    "./chunks/part-00.txt",
+    "./chunks/part-01.txt",
+    "./chunks/part-02.txt",
+    "./chunks/part-03.txt",
+    "./chunks/part-04.txt",
+    "./chunks/part-05.txt",
+    "./chunks/part-06.txt"
+  ];
+
   try{
-    const texts=await Promise.all(parts.map(p=>fetch(p,{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(p);return r.text()})));
+    const texts=await Promise.all(
+      parts.map(p=>fetch(p,{cache:"no-store"}).then(r=>{
+        if(!r.ok) throw new Error(p);
+        return r.text();
+      }))
+    );
+
+    let app=texts.join("");
+    const extras=[
+      "./admin.js?v=11",
+      "./mobile-guard.js?v=3",
+      "./wheel-fix.js?v=4",
+      "./mechanical-motion.js?v=2"
+    ];
+    const extraTags=extras.map(src=>'<script src="'+src+'"></'+'script>').join("");
+
+    if(app.includes("</body>")){
+      app=app.replace("</body>",extraTags+"</body>");
+    }else{
+      app+=extraTags;
+    }
+
     document.open();
-    document.write(texts.join('')+'<script src="./admin.js?v=10"><\\/script><script src="./mobile-guard.js?v=2"><\\/script><script src="./wheel-fix.js?v=3"><\\/script><script src="./mechanical-motion.js?v=1"><\\/script>');
+    document.write(app);
     document.close();
-  }catch(e){document.body.innerHTML='<div class="loading">转盘加载失败，请刷新重试。</div>';}
+  }catch(e){
+    document.body.innerHTML='<div class="loading">转盘加载失败，请刷新重试。</div>';
+  }
 })();
 </script>
-</body></html>
+</body>
+</html>
