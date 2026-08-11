@@ -87,7 +87,14 @@ document.getElementById("defaultBtn").addEventListener("click",function(){
   }
 });
 
-document.getElementById("saveBtn").addEventListener("click",saveLocal);
+/* 保存按钮改由线上同步桥接层处理 */
+document.getElementById("saveBtn").addEventListener("click",function(){
+  if(window.WeekendWheelSync && typeof window.WeekendWheelSync.save==="function"){
+    window.WeekendWheelSync.save();
+  }else{
+    alert("线上同步模块尚未加载完成，请稍后再试。");
+  }
+});
 
 document.getElementById("exportBtn").addEventListener("click",function(){
   var blob=new Blob([JSON.stringify({version:7,items:items},null,2)],{type:"application/json"});
@@ -151,12 +158,29 @@ document.getElementById("batchApplyBtn").addEventListener("click",function(){
   resetRound();
 });
 
+/* 暴露最小接口给线上配置层，不改动转盘核心逻辑 */
+window.WeekendWheelApp={
+  getItems:function(){ return items.slice(); },
+  setItems:function(arr){
+    if(!Array.isArray(arr)) return false;
+    var next=arr.map(function(x){return String(x).trim();}).filter(Boolean);
+    if(next.length<2) return false;
+    items=next;
+    autoSave();
+    renderEditor();
+    resetRound();
+    return true;
+  },
+  saveLocal:function(){ autoSave(); }
+};
+
 renderEditor();
 resetRound();
 
 })();
 </script>
 
+<script src="./sync.js"></script>
 <script>
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   window.addEventListener("load", function () {
