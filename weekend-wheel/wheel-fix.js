@@ -10,13 +10,13 @@ function installStyle(){
   style.id="wheelSectorFixStyle";
   style.textContent=`
 :root{
-  --wheel-c:rgba(166,205,195,.62);
-  --wheel-divider:rgba(69,104,92,.22);
+  --wheel-unified:rgba(199,222,215,.46);
+  --wheel-divider:rgba(83,111,101,.16);
 }
 @media(prefers-color-scheme:dark){
   :root{
-    --wheel-c:rgba(77,119,107,.62);
-    --wheel-divider:rgba(255,255,255,.14);
+    --wheel-unified:rgba(74,102,94,.46);
+    --wheel-divider:rgba(255,255,255,.10);
   }
 }
 `;
@@ -64,16 +64,10 @@ function applyWheelEnhancements(){
   var count=paths.length;
   if(!count) return;
 
-  paths.forEach(function(path,i){
-    var fill;
-    if(count>2 && count%2===1 && i===count-1){
-      fill="var(--wheel-c)";
-    }else{
-      fill=(i%2===0)?"var(--wheel-a)":"var(--wheel-b)";
-    }
-    path.setAttribute("fill",fill);
+  paths.forEach(function(path){
+    path.setAttribute("fill","var(--wheel-unified)");
     path.setAttribute("stroke","var(--wheel-divider)");
-    path.setAttribute("stroke-width","1.55");
+    path.setAttribute("stroke-width","1.25");
     path.setAttribute("stroke-linejoin","round");
   });
 
