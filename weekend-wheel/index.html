@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#eef2ef">
+<title>周末去哪儿</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:#eef2ef;color:#255f54;display:grid;place-items:center;min-height:100vh}.loading{padding:24px;text-align:center}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#317b6c;animation:p 1s ease-in-out infinite}@keyframes p{50%{opacity:.25;transform:scale(.75)}}</style>
+</head>
+<body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
+<script>
+(async()=>{
+  const parts=[
+      "./chunks/part-00.txt",
+      "./chunks/part-01.txt",
+      "./chunks/part-02.txt",
+      "./chunks/part-03.txt",
+      "./chunks/part-04.txt",
+      "./chunks/part-05.txt",
+      "./chunks/part-06.txt"
+  ];
+  try{
+    const texts=await Promise.all(parts.map(p=>fetch(p).then(r=>{if(!r.ok)throw new Error(p);return r.text()})));
+    document.open();document.write(texts.join(''));document.close();
+  }catch(e){document.body.innerHTML='<div class="loading">转盘加载失败，请刷新重试。</div>';}
+})();
+</script>
+</body></html>
