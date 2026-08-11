@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#eef2ef">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>周末去哪儿</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
@@ -12,14 +15,15 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
+  const BUILD="20260811-2226";
   const parts=[
-    "./chunks/part-00.txt",
-    "./chunks/part-01.txt",
-    "./chunks/part-02.txt",
-    "./chunks/part-03.txt",
-    "./chunks/part-04.txt",
-    "./chunks/part-05.txt",
-    "./chunks/part-06.txt"
+    "./chunks/part-00.txt?b="+BUILD,
+    "./chunks/part-01.txt?b="+BUILD,
+    "./chunks/part-02.txt?b="+BUILD,
+    "./chunks/part-03.txt?b="+BUILD,
+    "./chunks/part-04.txt?b="+BUILD,
+    "./chunks/part-05.txt?b="+BUILD,
+    "./chunks/part-06.txt?b="+BUILD
   ];
 
   try{
@@ -31,11 +35,18 @@
     );
 
     let app=texts.join("");
+
+    /* 在页面组装阶段直接删除旧说明，不再依赖增强脚本执行后才移除。 */
+    app=app.replace(
+      '<div class="helper">文字会随停靠位置自动翻正；右侧同色细针精确标记最终落点。</div>',
+      ''
+    );
+
     const extras=[
-      "./admin.js?v=11",
-      "./mobile-guard.js?v=3",
-      "./wheel-fix.js?v=10",
-      "./mechanical-motion.js?v=3"
+      "./admin.js?b="+BUILD,
+      "./mobile-guard.js?b="+BUILD,
+      "./wheel-fix.js?b="+BUILD,
+      "./mechanical-motion.js?b="+BUILD
     ];
     const extraTags=extras.map(src=>'<script src="'+src+'"></'+'script>').join("");
 
