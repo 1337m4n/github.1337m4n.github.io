@@ -10,12 +10,10 @@ function installStyle(){
   style.id="wheelSectorFixStyle";
   style.textContent=`
 :root{
-  /* 轮盘扇区：真正纯白，不带任何色偏 */
-  --wheel-unified:#ffffff;
-  --wheel-divider:rgba(43,53,49,.085);
+  --wheel-divider:rgba(70,76,73,.10);
 }
 
-/* 毛玻璃质感放在轮盘外壳，而不是给扇区染色 */
+/* 毛玻璃质感继续保留在轮盘外壳 */
 .wheelPanel{
   background:rgba(255,255,255,.56)!important;
   -webkit-backdrop-filter:blur(22px) saturate(145%)!important;
@@ -103,6 +101,18 @@ function fontSizeForCount(count){
   return 10;
 }
 
+function pastelRainbow(index,count){
+  /*
+    低饱和淡彩虹：从珊瑚粉开始，沿色环顺时针完整走一圈。
+    每次数量变化都会按当前 count 重新均分色相，因此不会重复固定 7 色。
+  */
+  var startHue=350;
+  var hue=(startHue + index*(360/count))%360;
+  var saturation=isCompact()?44:42;
+  var lightness=isCompact()?91:90;
+  return "hsl("+hue.toFixed(1)+" "+saturation+"% "+lightness+"%)";
+}
+
 function applyWheelEnhancements(){
   var svg=document.getElementById("wheelSvg");
   if(!svg) return;
@@ -111,10 +121,10 @@ function applyWheelEnhancements(){
   var count=paths.length;
   if(!count) return;
 
-  paths.forEach(function(path){
-    path.setAttribute("fill","var(--wheel-unified)");
+  paths.forEach(function(path,i){
+    path.setAttribute("fill",pastelRainbow(i,count));
     path.setAttribute("stroke","var(--wheel-divider)");
-    path.setAttribute("stroke-width","0.9");
+    path.setAttribute("stroke-width","0.95");
     path.setAttribute("stroke-linejoin","round");
   });
 
