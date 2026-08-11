@@ -4,7 +4,7 @@ var OWNER="1337m4n",REPO="github.1337m4n.github.io",BRANCH="master",CONFIG_PATH=
 
 function css(){
   var s=document.createElement("style");
-  s.textContent=".editorPanel{display:none!important}.adminOnlyBlock{display:none!important}body.adminMode .editorPanel{display:block!important}body.adminMode .adminOnlyBlock{display:block!important}body.adminMode .adminOnlyBlock.controls{display:flex!important}.adminActions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.adminEntry{border:1px solid rgba(76,111,99,.16);background:rgba(255,255,255,.46);color:var(--accent-deep);border-radius:999px;padding:7px 11px;font-size:12px;font-weight:650}.adminEntry.active{background:rgba(49,123,108,.12)}";
+  s.textContent=".editorPanel{display:none!important}.adminOnlyBlock{display:none!important}body.adminMode .editorPanel{display:block!important}body.adminMode .adminOnlyBlock{display:block!important}body.adminMode .adminOnlyBlock.controls{display:flex!important}.adminActions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.adminEntry{border:1px solid rgba(76,111,99,.16);background:rgba(255,255,255,.46);color:var(--accent-deep);border-radius:999px;padding:7px 11px;font-size:12px;font-weight:650}.adminEntry.active{background:rgba(49,123,108,.12)}.wheelResultBox{margin:16px auto 0;width:min(100%,620px);text-align:center}.wheelResultBox #result{font-size:clamp(24px,3vw,34px);line-height:1.25;margin-top:6px}.wheelResultBox #remain{margin-top:8px}";
   document.head.appendChild(s);
 }
 function readToken(){try{return(localStorage.getItem(TOKEN_KEY)||"").trim()}catch(e){return""}}
@@ -75,6 +75,15 @@ function markAdminOnlyBlocks(){
   }
 }
 
+function moveResultBelowWheel(){
+  var resultBox=document.querySelector(".sidePanel .resultBox");
+  var wheelPanel=document.querySelector(".wheelPanel");
+  var wheelStage=document.querySelector(".wheelPanel .wheelStage");
+  if(!resultBox||!wheelPanel||!wheelStage)return;
+  resultBox.classList.add("wheelResultBox");
+  wheelStage.insertAdjacentElement("afterend",resultBox);
+}
+
 function ui(){
   css();
   var badge=document.querySelector("header .badge");if(badge){Array.from(badge.childNodes).forEach(function(n){if(n.nodeType===3)n.nodeValue="线上共享配置"})}
@@ -83,6 +92,7 @@ function ui(){
     var wrap=document.createElement("div");wrap.className="adminActions";if(badge){badge.parentNode.insertBefore(wrap,badge);wrap.appendChild(badge)}else header.appendChild(wrap);
     var b=document.createElement("button");b.id="adminBtn";b.className="adminEntry";b.type="button";b.textContent="管理员";b.addEventListener("click",enterAdmin);wrap.appendChild(b)
   }
+  moveResultBelowWheel();
   markAdminOnlyBlocks();
   var save=document.getElementById("saveBtn");if(save){save.textContent="保存线上配置";save.addEventListener("click",saveRemote,true)}
   setAdmin(false);
