@@ -68,6 +68,12 @@ function installStyle(){
   document.head.appendChild(style);
 }
 
+function removeHelperCopy(){
+  document.querySelectorAll(".helper").forEach(function(el){
+    el.remove();
+  });
+}
+
 function isCompact(){
   return window.matchMedia("(max-width:680px), (max-height:520px)").matches;
 }
@@ -149,6 +155,7 @@ function scheduleFix(){
 
 function boot(){
   installStyle();
+  removeHelperCopy();
 
   var svg=document.getElementById("wheelSvg");
   if(!svg){
