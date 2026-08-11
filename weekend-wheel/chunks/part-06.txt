@@ -1,0 +1,169 @@
+nimationFrame(frame);
+      return;
+    }
+
+    /* 轻微回弹落位：+1.6° -> 0°，增强机械阻尼感 */
+    var settleStart=performance.now();
+    var overshoot=1.6;
+    function settle(ts){
+      var st=Math.min(1,(ts-settleStart)/220);
+      var back=overshoot*Math.sin(st*Math.PI)*(1-st);
+      setRotorAngle(target+back);
+      if(st<1){requestAnimationFrame(settle);return;}
+
+      angle=normalize(target);
+      setRotorAngle(angle);
+      rotor.classList.remove("is-spinning");
+      history.push(chosenIdx);
+      resultEl.textContent=items[chosenIdx];
+
+      if(noRepeatEl.checked){
+        active=active.filter(function(idx){return idx!==chosenIdx;});
+        angle=0;
+        setRotorAngle(0);
+        buildWheel();
+      }
+
+      renderHistory();
+      spinning=false;
+      updateRemain();
+    }
+    requestAnimationFrame(settle);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+spinBtn.addEventListener("click",spin);
+
+document.getElementById("resetBtn").addEventListener("click",function(){
+  if(!spinning) resetRound();
+});
+
+document.getElementById("undoBtn").addEventListener("click",function(){
+  if(spinning || history.length===0) return;
+  var idx=history.pop();
+  if(noRepeatEl.checked && active.indexOf(idx)===-1){
+    active.push(idx);
+    active.sort(function(a,b){return a-b;});
+  }
+  angle=0;setRotorAngle(0);buildWheel();
+  resultEl.textContent=history.length ? items[history[history.length-1]] : "等你开摇";
+  renderHistory();updateRemain();
+});
+
+noRepeatEl.addEventListener("change",function(){
+  if(!spinning) resetRound();
+});
+
+document.getElementById("addBtn").addEventListener("click",function(){
+  items.push("✨ 新项目 "+(items.length+1));
+  autoSave();
+  renderEditor();
+  resetRound();
+
+  var inputs=editorEl.querySelectorAll("input");
+  if(inputs.length){
+    var last=inputs[inputs.length-1];
+    last.focus();
+    last.select();
+    last.scrollIntoView({behavior:"smooth",block:"center"});
+  }
+});
+
+document.getElementById("shuffleBtn").addEventListener("click",function(){
+  for(var i=items.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var tmp=items[i];items[i]=items[j];items[j]=tmp;
+  }
+  autoSave();renderEditor();resetRound();
+});
+
+document.getElementById("defaultBtn").addEventListener("click",function(){
+  if(confirm("恢复默认 12 项？当前编辑内容会被覆盖。")){
+    items=defaults.slice();
+    autoSave();
+    renderEditor();resetRound();
+  }
+});
+
+document.getElementById("saveBtn").addEventListener("click",saveLocal);
+
+document.getElementById("exportBtn").addEventListener("click",function(){
+  var blob=new Blob([JSON.stringify({version:7,items:items},null,2)],{type:"application/json"});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement("a");
+  a.href=url;a.download="周末去哪儿-转盘配置.json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+});
+
+document.getElementById("importFile").addEventListener("change",function(e){
+  var f=e.target.files&&e.target.files[0];
+  if(!f)return;
+  var reader=new FileReader();
+  reader.onload=function(){
+    try{
+      var data=JSON.parse(reader.result);
+      var arr=Array.isArray(data)?data:data.items;
+      if(!Array.isArray(arr)||arr.length<2)throw new Error("bad");
+      items=arr.map(function(x){return String(x).trim();}).filter(Boolean);
+      autoSave();
+      renderEditor();resetRound();
+    }catch(err){
+      alert("导入失败：不是有效的配置文件。");
+    }
+    e.target.value="";
+  };
+  reader.readAsText(f,"utf-8");
+});
+
+
+var batchBtn=document.getElementById("batchBtn");
+var batchBox=document.getElementById("batchBox");
+var batchText=document.getElementById("batchText");
+
+batchBtn.addEventListener("click",function(){
+  batchText.value=items.join("\n");
+  batchBox.classList.add("show");
+  batchText.focus();
+});
+
+document.getElementById("batchCancelBtn").addEventListener("click",function(){
+  batchBox.classList.remove("show");
+});
+
+document.getElementById("batchApplyBtn").addEventListener("click",function(){
+  var arr=batchText.value
+    .split(/\r?\n/)
+    .map(function(x){return x.trim();})
+    .filter(Boolean);
+
+  if(arr.length<2){
+    alert("至少需要 2 个项目。");
+    return;
+  }
+
+  items=arr;
+  autoSave();
+  batchBox.classList.remove("show");
+  renderEditor();
+  resetRound();
+});
+
+renderEditor();
+resetRound();
+
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js").catch(function () {});
+  });
+}
+</script>
+
+</body>
+</html>
