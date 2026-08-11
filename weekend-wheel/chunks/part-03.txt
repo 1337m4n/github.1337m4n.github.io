@@ -7,7 +7,7 @@ or">
           <div class="pointerWrap"><div id="pointer" class="pointer"></div></div>
         </div>
         <div class="centerDisc">
-          <button id="spinBtn" type="button">开摇</button>
+          <button id="spinBtn" type="button">开转</button>
         </div>
       </div>
       <div class="helper">文字会随停靠位置自动翻正；右侧同色细针精确标记最终落点。</div>
@@ -16,7 +16,7 @@ or">
     <aside class="panel sidePanel">
       <div class="resultBox">
         <div class="kicker">本轮结果</div>
-        <div id="result">等你开摇</div>
+        <div id="result">等你开转</div>
         <div id="remain">当前 12 个候选</div>
       </div>
 
