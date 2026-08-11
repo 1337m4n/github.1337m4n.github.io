@@ -1,0 +1,141 @@
+<=180 ? 0 : 1;
+  return ["M",cx,cy,"L",start.x,start.y,"A",r,r,0,large,0,end.x,end.y,"Z"].join(" ");
+}
+
+function shorten(s,n){
+  return s.length<=n ? s : s.slice(0,n-1)+"…";
+}
+
+function buildWheel(){
+  svg.innerHTML="";
+  labelNodes=[];
+  if(active.length===0) return;
+
+  var ns="http://www.w3.org/2000/svg";
+  var count=active.length;
+  var slice=360/count;
+
+  var defs=document.createElementNS(ns,"defs");
+  var filter=document.createElementNS(ns,"filter");
+  filter.setAttribute("id","softInner");
+  filter.innerHTML='<feGaussianBlur in="SourceAlpha" stdDeviation="1.2" result="blur"/><feOffset dy="1"/><feComposite in2="SourceAlpha" operator="out"/><feColorMatrix values="0 0 0 0 0.1 0 0 0 0 0.18 0 0 0 0 0.15 0 0 0 .12 0"/><feComposite in2="SourceGraphic" operator="over"/>';
+  defs.appendChild(filter);
+  svg.appendChild(defs);
+
+  for(var i=0;i<count;i++){
+    var start=-slice/2+i*slice;
+    var end=start+slice;
+
+    var path=document.createElementNS(ns,"path");
+    path.setAttribute("d",arcPath(300,300,286,start,end));
+    path.setAttribute("fill",i%2===0 ? "var(--wheel-a)" : "var(--wheel-b)");
+    path.setAttribute("stroke","rgba(82,111,100,.13)");
+    path.setAttribute("stroke-width","1.2");
+    path.setAttribute("filter","url(#softInner)");
+    svg.appendChild(path);
+
+    /* rim tick */
+    var tickA=i*slice-slice/2;
+    var p1=polar(300,300,270,tickA);
+    var p2=polar(300,300,283,tickA);
+    var line=document.createElementNS(ns,"line");
+    line.setAttribute("x1",p1.x);line.setAttribute("y1",p1.y);
+    line.setAttribute("x2",p2.x);line.setAttribute("y2",p2.y);
+    line.setAttribute("stroke","var(--accent-deep)");
+    line.setAttribute("stroke-opacity",".28");
+    line.setAttribute("stroke-width","2");
+    svg.appendChild(line);
+
+    var center=i*slice;
+
+    /*
+      文字沿扇区中轴线排布。
+      这里只记录几何位置，不在这里固定决定是否翻转。
+      真正的“正向可读”由 updateLabelOrientation() 根据
+      当前轮盘最终角度动态修正。
+    */
+    var textPos=polar(300,300,205,center);
+    var label=shorten(items[active[i]], count>12?12:16);
+
+    var g=document.createElementNS(ns,"g");
+    g.setAttribute("transform","translate("+textPos.x+" "+textPos.y+")");
+
+    var text=document.createElementNS(ns,"text");
+    text.setAttribute("text-anchor","middle");
+    text.setAttribute("dominant-baseline","middle");
+    text.setAttribute("fill","var(--text)");
+    text.setAttribute("font-size",count>12?"12":"14");
+    text.setAttribute("font-weight","600");
+    text.setAttribute("letter-spacing",".15");
+    text.textContent=label;
+
+    g.appendChild(text);
+    svg.appendChild(g);
+
+    labelNodes.push({
+      group:g,
+      baseCenter:center,
+      x:textPos.x,
+      y:textPos.y
+    });
+  }
+
+  var ring=document.createElementNS(ns,"circle");
+  ring.setAttribute("cx","300");ring.setAttribute("cy","300");ring.setAttribute("r","286");
+  ring.setAttribute("fill","none");ring.setAttribute("stroke","rgba(43,100,84,.22)");
+  ring.setAttribute("stroke-opacity",".16");ring.setAttribute("stroke-width","3");
+  svg.appendChild(ring);
+
+  var inner=document.createElementNS(ns,"circle");
+  inner.setAttribute("cx","300");inner.setAttribute("cy","300");inner.setAttribute("r","84");
+  inner.setAttribute("fill","var(--panel)");
+  inner.setAttribute("stroke","var(--line)");
+  inner.setAttribute("stroke-width","2");
+  svg.appendChild(inner);
+  updateLabelOrientation(angle);
+}
+
+function renderEditor(){
+  editorEl.innerHTML="";
+  var countEl=document.getElementById("editorCount");
+  if(countEl) countEl.textContent=items.length+" 项";
+
+  items.forEach(function(name,i){
+    var row=document.createElement("div");
+    row.className="itemRow";
+
+    var num=document.createElement("div");
+    num.className="num";
+    num.textContent=i+1;
+
+    var input=document.createElement("input");
+    input.value=name;
+    input.setAttribute("aria-label","项目 "+(i+1));
+    input.addEventListener("change",function(){
+      var v=input.value.trim();
+      items[i]=v || ("项目 "+(i+1));
+      input.value=items[i];
+      autoSave();
+      resetRound();
+    });
+    input.addEventListener("keydown",function(e){
+      if(e.key==="Enter"){
+        input.blur();
+      }
+    });
+
+    var actions=document.createElement("div");
+    actions.className="itemActions";
+
+    var up=document.createElement("button");
+    up.type="button";
+    up.title="上移";
+    up.textContent="↑";
+    up.disabled=(i===0);
+    up.addEventListener("click",function(){
+      if(i===0)return;
+      var tmp=items[i-1];items[i-1]=items[i];items[i]=tmp;
+      autoSave();renderEditor();resetRound();
+    });
+
+    var down=do
