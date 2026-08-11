@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekend-wheel-pwa-v4";
+const CACHE_NAME = "weekend-wheel-pwa-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -56,7 +56,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, {cache:"no-store"})
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
@@ -67,7 +67,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.endsWith("/weekend-wheel/admin.js") || url.pathname.includes("/weekend-wheel/chunks/")) {
+  if (
+    url.pathname.endsWith("/weekend-wheel/admin.js") ||
+    url.pathname.endsWith("/weekend-wheel/sync.js") ||
+    url.pathname.includes("/weekend-wheel/chunks/")
+  ) {
     event.respondWith(
       fetch(event.request, {cache:"no-store"})
         .then((response) => {
