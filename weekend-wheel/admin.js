@@ -4,7 +4,7 @@ var OWNER="1337m4n",REPO="github.1337m4n.github.io",BRANCH="master",CONFIG_PATH=
 
 function css(){
   var s=document.createElement("style");
-  s.textContent=".sidePanel,.editorPanel{display:none!important}body.adminMode .sidePanel{display:block!important}body.adminMode .editorPanel{display:block!important}body:not(.adminMode) .layout{grid-template-columns:1fr!important}body:not(.adminMode) .wheelPanel{max-width:760px;width:100%;margin:0 auto}.adminActions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.adminEntry{border:1px solid rgba(76,111,99,.16);background:rgba(255,255,255,.46);color:var(--accent-deep);border-radius:999px;padding:7px 11px;font-size:12px;font-weight:650}.adminEntry.active{background:rgba(49,123,108,.12)}";
+  s.textContent=".editorPanel{display:none!important}.adminOnlyBlock{display:none!important}body.adminMode .editorPanel{display:block!important}body.adminMode .adminOnlyBlock{display:block!important}body.adminMode .adminOnlyBlock.controls{display:flex!important}.adminActions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.adminEntry{border:1px solid rgba(76,111,99,.16);background:rgba(255,255,255,.46);color:var(--accent-deep);border-radius:999px;padding:7px 11px;font-size:12px;font-weight:650}.adminEntry.active{background:rgba(49,123,108,.12)}";
   document.head.appendChild(s);
 }
 function readToken(){try{return(localStorage.getItem(TOKEN_KEY)||"").trim()}catch(e){return""}}
@@ -57,6 +57,24 @@ async function saveRemote(e){
   finally{if(btn){btn.disabled=false;btn.textContent=old}}
 }
 
+function markAdminOnlyBlocks(){
+  var panel=document.querySelector(".sidePanel");
+  if(!panel)return;
+  var titles=panel.querySelectorAll(".sectionTitle");
+  for(var i=0;i<titles.length;i++){
+    var text=(titles[i].textContent||"").trim();
+    if(text==="数据管理"||text==="管理员工具"){
+      titles[i].textContent="管理员工具";
+      titles[i].classList.add("adminOnlyBlock");
+      var controls=titles[i].nextElementSibling;
+      var note=controls?controls.nextElementSibling:null;
+      if(controls)controls.classList.add("adminOnlyBlock");
+      if(note&&note.classList.contains("note"))note.classList.add("adminOnlyBlock");
+      break;
+    }
+  }
+}
+
 function ui(){
   css();
   var badge=document.querySelector("header .badge");if(badge){Array.from(badge.childNodes).forEach(function(n){if(n.nodeType===3)n.nodeValue="线上共享配置"})}
@@ -65,8 +83,8 @@ function ui(){
     var wrap=document.createElement("div");wrap.className="adminActions";if(badge){badge.parentNode.insertBefore(wrap,badge);wrap.appendChild(badge)}else header.appendChild(wrap);
     var b=document.createElement("button");b.id="adminBtn";b.className="adminEntry";b.type="button";b.textContent="管理员";b.addEventListener("click",enterAdmin);wrap.appendChild(b)
   }
+  markAdminOnlyBlocks();
   var save=document.getElementById("saveBtn");if(save){save.textContent="保存线上配置";save.addEventListener("click",saveRemote,true)}
-  var title=document.querySelector(".sidePanel .sectionTitle:last-of-type");if(title&&title.textContent.trim()==="数据管理")title.textContent="管理员工具";
   setAdmin(false);
   loadRemote();
 }
