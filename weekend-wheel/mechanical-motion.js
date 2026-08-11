@@ -59,11 +59,6 @@ function installStyle(){
   100%{transform:rotate(0deg)}
 }
 
-/* 等机械回弹完成后再亮金色开奖高光，避免光圈和扇区错位。 */
-.winningPath,.winningRing{
-  animation-delay:.36s!important;
-}
-
 @media(max-width:680px){
   .mechanicalRotorWrap.mechanical-settle{
     animation-duration:.34s;
@@ -82,9 +77,6 @@ function installStyle(){
   .mechanicalRotorWrap.mechanical-running,
   .mechanicalRotorWrap.mechanical-settle{
     animation:none!important;
-  }
-  .winningPath,.winningRing{
-    animation-delay:0s!important;
   }
 }
 `;
