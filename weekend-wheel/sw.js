@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekend-wheel-pwa-v6";
+const CACHE_NAME = "weekend-wheel-pwa-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./icons/icon.svg",
   "./sync.js",
   "./admin.js",
+  "./mobile-guard.js",
   "./chunks/part-00.txt",
   "./chunks/part-01.txt",
   "./chunks/part-02.txt",
@@ -40,62 +41,27 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.endsWith("/weekend-wheel/config.json")) {
-    event.respondWith(
-      fetch(event.request, {cache:"no-store"})
-        .then((response) => {
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put("./config.json", copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match("./config.json"))
-    );
+    event.respondWith(fetch(event.request,{cache:"no-store"}).catch(()=>caches.match("./config.json")));
     return;
   }
 
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request, {cache:"no-store"})
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
-          return response;
-        })
-        .catch(() => caches.match("./index.html"))
-    );
+  if(event.request.mode==="navigate"){
+    event.respondWith(fetch(event.request,{cache:"no-store"}).catch(()=>caches.match("./index.html")));
     return;
   }
 
-  if (
+  if(
     url.pathname.endsWith("/weekend-wheel/admin.js") ||
+    url.pathname.endsWith("/weekend-wheel/mobile-guard.js") ||
     url.pathname.endsWith("/weekend-wheel/sync.js") ||
     url.pathname.includes("/weekend-wheel/chunks/")
-  ) {
-    event.respondWith(
-      fetch(event.request, {cache:"no-store"})
-        .then((response) => {
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
+  ){
+    event.respondWith(fetch(event.request,{cache:"no-store"}).then(r=>{
+      if(r.ok)caches.open(CACHE_NAME).then(c=>c.put(event.request,r.clone()));
+      return r;
+    }).catch(()=>caches.match(event.request)));
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (response && response.status === 200) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        }
-        return response;
-      });
-    })
-  );
+  event.respondWith(caches.match(event.request).then(c=>c||fetch(event.request)));
 });
