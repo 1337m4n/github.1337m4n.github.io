@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekend-wheel-pwa-v8";
+const CACHE_NAME = "weekend-wheel-pwa-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -43,12 +43,18 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.endsWith("/weekend-wheel/config.json")) {
-    event.respondWith(fetch(event.request,{cache:"no-store"}).catch(()=>caches.match("./config.json")));
+    event.respondWith(
+      fetch(event.request,{cache:"no-store"})
+        .catch(()=>caches.match("./config.json"))
+    );
     return;
   }
 
   if(event.request.mode==="navigate"){
-    event.respondWith(fetch(event.request,{cache:"no-store"}).catch(()=>caches.match("./index.html")));
+    event.respondWith(
+      fetch(event.request,{cache:"no-store"})
+        .catch(()=>caches.match("./index.html"))
+    );
     return;
   }
 
@@ -60,12 +66,18 @@ self.addEventListener("fetch", (event) => {
     url.pathname.endsWith("/weekend-wheel/sync.js") ||
     url.pathname.includes("/weekend-wheel/chunks/")
   ){
-    event.respondWith(fetch(event.request,{cache:"no-store"}).then(r=>{
-      if(r.ok)caches.open(CACHE_NAME).then(c=>c.put(event.request,r.clone()));
-      return r;
-    }).catch(()=>caches.match(event.request)));
+    event.respondWith(
+      fetch(event.request,{cache:"no-store"})
+        .then(r=>{
+          if(r.ok)caches.open(CACHE_NAME).then(c=>c.put(event.request,r.clone()));
+          return r;
+        })
+        .catch(()=>caches.match(event.request))
+    );
     return;
   }
 
-  event.respondWith(caches.match(event.request).then(c=>c||fetch(event.request)));
+  event.respondWith(
+    caches.match(event.request).then(c=>c||fetch(event.request))
+  );
 });
