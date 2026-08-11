@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekend-wheel-pwa-v7";
+const CACHE_NAME = "weekend-wheel-pwa-v8";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,6 +7,8 @@ const APP_SHELL = [
   "./sync.js",
   "./admin.js",
   "./mobile-guard.js",
+  "./wheel-fix.js",
+  "./mechanical-motion.js",
   "./chunks/part-00.txt",
   "./chunks/part-01.txt",
   "./chunks/part-02.txt",
@@ -53,6 +55,8 @@ self.addEventListener("fetch", (event) => {
   if(
     url.pathname.endsWith("/weekend-wheel/admin.js") ||
     url.pathname.endsWith("/weekend-wheel/mobile-guard.js") ||
+    url.pathname.endsWith("/weekend-wheel/wheel-fix.js") ||
+    url.pathname.endsWith("/weekend-wheel/mechanical-motion.js") ||
     url.pathname.endsWith("/weekend-wheel/sync.js") ||
     url.pathname.includes("/weekend-wheel/chunks/")
   ){
