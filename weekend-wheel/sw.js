@@ -1,10 +1,11 @@
-const CACHE_NAME = "weekend-wheel-pwa-v3";
+const CACHE_NAME = "weekend-wheel-pwa-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./sync.js",
+  "./admin.js",
   "./chunks/part-00.txt",
   "./chunks/part-01.txt",
   "./chunks/part-02.txt",
@@ -38,7 +39,6 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Shared config must always prefer network so all visitors get the newest list.
   if (url.pathname.endsWith("/weekend-wheel/config.json")) {
     event.respondWith(
       fetch(event.request, {cache:"no-store"})
@@ -63,6 +63,21 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+
+  if (url.pathname.endsWith("/weekend-wheel/admin.js") || url.pathname.includes("/weekend-wheel/chunks/")) {
+    event.respondWith(
+      fetch(event.request, {cache:"no-store"})
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
