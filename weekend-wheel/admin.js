@@ -84,6 +84,22 @@ function moveResultBelowWheel(){
   wheelStage.insertAdjacentElement("afterend",resultBox);
 }
 
+function normalizeSpinCopy(){
+  var spin=document.getElementById("spinBtn");
+  if(spin&&spin.textContent.trim()==="开摇") spin.textContent="开转";
+  var result=document.getElementById("result");
+  if(result&&result.textContent.trim()==="等你开摇") result.textContent="等你开转";
+}
+
+function watchSpinCopy(){
+  normalizeSpinCopy();
+  var spin=document.getElementById("spinBtn");
+  var result=document.getElementById("result");
+  var observer=new MutationObserver(function(){normalizeSpinCopy()});
+  if(spin) observer.observe(spin,{childList:true,subtree:true,characterData:true});
+  if(result) observer.observe(result,{childList:true,subtree:true,characterData:true});
+}
+
 function ui(){
   css();
   var badge=document.querySelector("header .badge");if(badge){Array.from(badge.childNodes).forEach(function(n){if(n.nodeType===3)n.nodeValue="线上共享配置"})}
@@ -94,6 +110,7 @@ function ui(){
   }
   moveResultBelowWheel();
   markAdminOnlyBlocks();
+  watchSpinCopy();
   var save=document.getElementById("saveBtn");if(save){save.textContent="保存线上配置";save.addEventListener("click",saveRemote,true)}
   setAdmin(false);
   loadRemote();
