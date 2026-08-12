@@ -7,8 +7,6 @@ var BRANCH="master";
 var CONFIG_PATH="weekend-wheel/config.json";
 var TOKEN_KEY="weekendWheelGithubTokenV1";
 var adminMode=false;
-var wheelRaf=0;
-var resizeTimer=0;
 
 function isCompact(){
   return window.matchMedia("(max-width:680px), (max-height:520px)").matches;
@@ -102,10 +100,7 @@ html{scroll-behavior:smooth}
   .footer{padding:14px 0 2px;font-size:11px}
 }
 
-@media(max-width:430px){
-  .badge{display:none}
-}
-
+@media(max-width:430px){.badge{display:none}}
 @media(max-width:390px){
   .wrap{padding-left:8px;padding-right:8px}
   h1{font-size:20px}
@@ -115,7 +110,6 @@ html{scroll-behavior:smooth}
   #spinBtn{font-size:16px!important}
   .toolbar{grid-template-columns:1fr!important}
 }
-
 @media(max-width:950px) and (max-height:520px) and (orientation:landscape){
   .wrap{padding:calc(6px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left))}
   header{display:flex;align-items:center;margin-bottom:7px}
@@ -128,11 +122,7 @@ html{scroll-behavior:smooth}
   .wheelResultBox #result{font-size:20px}
   .history .hist:nth-child(n+4){display:none}
 }
-
-@media(prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  button,.btn,#wheelSvg text{transition:none!important}
-}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button,.btn,#wheelSvg text{transition:none!important}}
 `;
   document.head.appendChild(s);
 }
@@ -147,19 +137,14 @@ function getInputs(){return Array.from(document.querySelectorAll("#editor .itemR
 function getItems(){return getInputs().map(function(x){return x.value.trim()}).filter(Boolean)}
 
 async function verify(t){
-  try{
-    var r=await fetch(api()+"?ref="+BRANCH,{headers:headers(t),cache:"no-store"});
-    return r.ok;
-  }catch(e){return false}
+  try{var r=await fetch(api()+"?ref="+BRANCH,{headers:headers(t),cache:"no-store"});return r.ok}catch(e){return false}
 }
-
 function setAdmin(on){
   adminMode=!!on;
   document.body.classList.toggle("adminMode",adminMode);
   var b=document.getElementById("adminBtn");
   if(b){b.textContent=adminMode?"退出管理":"管理员";b.classList.toggle("active",adminMode)}
 }
-
 async function enterAdmin(){
   if(adminMode){setAdmin(false);return}
   var t=readToken();
@@ -175,40 +160,6 @@ async function enterAdmin(){
   saveToken(t);setAdmin(true)
 }
 
-function syncUi(arr){
-  if(!Array.isArray(arr)||arr.length<2)return;
-  var guard=0;
-  while(getInputs().length>arr.length&&guard++<100){
-    var rows=document.querySelectorAll("#editor .itemRow");
-    var row=rows[rows.length-1];
-    var del=row&&row.querySelector(".itemActions button:last-child");
-    if(!del)break;
-    del.click();
-  }
-  guard=0;
-  while(getInputs().length<arr.length&&guard++<100){
-    var add=document.getElementById("addBtn");
-    if(!add)break;
-    add.click();
-  }
-  var ins=getInputs();
-  arr.forEach(function(v,i){
-    if(ins[i]){
-      ins[i].value=String(v);
-      ins[i].dispatchEvent(new Event("change",{bubbles:true}));
-    }
-  });
-}
-
-async function loadRemote(){
-  try{
-    var r=await fetch("./config.json?t="+Date.now(),{cache:"no-store"});
-    if(!r.ok)return;
-    var d=await r.json();
-    syncUi(Array.isArray(d)?d:d.items);
-  }catch(e){}
-}
-
 async function saveRemote(e){
   if(e){e.preventDefault();e.stopImmediatePropagation()}
   if(!adminMode){alert("请先进入管理员模式。");return}
@@ -221,18 +172,12 @@ async function saveRemote(e){
     if(!m.ok)throw new Error(m.status===401||m.status===403?"TOKEN":"READ");
     var meta=await m.json();
     var body=JSON.stringify({version:1,updatedAt:new Date().toISOString(),items:getItems()},null,2);
-    var p=await fetch(api(),{
-      method:"PUT",
-      headers:Object.assign({"Content-Type":"application/json"},headers(t)),
-      body:JSON.stringify({message:"Update weekend wheel shared configuration",content:b64(body),sha:meta.sha,branch:BRANCH})
-    });
+    var p=await fetch(api(),{method:"PUT",headers:Object.assign({"Content-Type":"application/json"},headers(t)),body:JSON.stringify({message:"Update weekend wheel shared configuration",content:b64(body),sha:meta.sha,branch:BRANCH})});
     if(!p.ok)throw new Error(p.status===401||p.status===403?"TOKEN":"WRITE");
     alert("已保存到线上。其他设备刷新后会读取这份最新配置。");
   }catch(err){
     if(err.message==="TOKEN"){clearToken();setAdmin(false);alert("GitHub Token 无效或权限不足，凭证已清除。")}else{alert("线上保存失败，请稍后重试。")}
-  }finally{
-    if(btn){btn.disabled=false;btn.textContent=old}
-  }
+  }finally{if(btn){btn.disabled=false;btn.textContent=old}}
 }
 
 function markAdminOnlyBlocks(){
@@ -252,7 +197,6 @@ function markAdminOnlyBlocks(){
     }
   }
 }
-
 function moveResultBelowWheel(){
   var resultBox=document.querySelector(".sidePanel .resultBox");
   var wheelStage=document.querySelector(".wheelPanel .wheelStage");
@@ -260,14 +204,12 @@ function moveResultBelowWheel(){
   resultBox.classList.add("wheelResultBox");
   wheelStage.insertAdjacentElement("afterend",resultBox);
 }
-
 function normalizeSpinCopy(){
   var spin=document.getElementById("spinBtn");
   if(spin&&spin.textContent.trim()==="开摇")spin.textContent="开转";
   var result=document.getElementById("result");
   if(result&&result.textContent.trim()==="等你开摇")result.textContent="等你开转";
 }
-
 function revealResult(){
   if(!isCompact())return;
   var result=document.getElementById("result");
@@ -281,7 +223,6 @@ function revealResult(){
   }
   if(navigator.vibrate){try{navigator.vibrate(10)}catch(e){}}
 }
-
 function watchCopyAndResult(){
   var spin=document.getElementById("spinBtn");
   var result=document.getElementById("result");
@@ -292,7 +233,7 @@ function watchCopyAndResult(){
     if(!result)return;
     var now=(result.textContent||"").trim();
     if(now!==last){
-      if(now&&now!=="等你开转"&&now!=="等你开摇")revealResult();
+      if(now&&now!=="等你开转"&&now!=="等你开摇"&&now!=="等你开始"&&now.indexOf("转动中")!==0)revealResult();
       last=now;
     }
   });
@@ -300,78 +241,25 @@ function watchCopyAndResult(){
   if(result)observer.observe(result,{childList:true,subtree:true,characterData:true});
 }
 
-function fixWheelVisuals(){
-  var svg=document.getElementById("wheelSvg");
-  if(!svg)return;
-
-  var paths=Array.from(svg.children).filter(function(el){return el.tagName&&el.tagName.toLowerCase()==="path"});
-  var count=paths.length;
-  paths.forEach(function(path,i){
-    var fill=(count>2&&count%2===1&&i===count-1)
-      ?"var(--accent-softer)"
-      :(i%2===0?"var(--wheel-a)":"var(--wheel-b)");
-    path.setAttribute("fill",fill);
-  });
-
-  var compact=isCompact();
-  var font=compact?(count>14?14:(count>10?17:19)):(count>12?12:14);
-  Array.from(svg.querySelectorAll("g text")).forEach(function(text){
-    text.setAttribute("font-size",String(font));
-    if(compact)text.setAttribute("font-weight","650");
-  });
-}
-
-function scheduleWheelFix(){
-  if(wheelRaf)cancelAnimationFrame(wheelRaf);
-  wheelRaf=requestAnimationFrame(function(){wheelRaf=0;fixWheelVisuals()});
-}
-
-function watchWheel(){
-  var svg=document.getElementById("wheelSvg");
-  if(!svg)return;
-  new MutationObserver(scheduleWheelFix).observe(svg,{childList:true,subtree:true});
-  scheduleWheelFix();
-  function resized(){
-    clearTimeout(resizeTimer);
-    resizeTimer=setTimeout(scheduleWheelFix,100);
-  }
-  window.addEventListener("resize",resized,{passive:true});
-  window.addEventListener("orientationchange",resized,{passive:true});
-  if(window.visualViewport)window.visualViewport.addEventListener("resize",resized,{passive:true});
-}
-
 function setupUi(){
   injectStyle();
-
   var badge=document.querySelector("header .badge");
-  if(badge){
-    Array.from(badge.childNodes).forEach(function(n){if(n.nodeType===3)n.nodeValue="线上共享配置"});
-  }
-
+  if(badge){Array.from(badge.childNodes).forEach(function(n){if(n.nodeType===3)n.nodeValue="线上共享配置"})}
   var header=document.querySelector("header");
   if(header&&!document.getElementById("adminBtn")){
     var wrap=document.createElement("div");
     wrap.className="adminActions";
     if(badge){badge.parentNode.insertBefore(wrap,badge);wrap.appendChild(badge)}else{header.appendChild(wrap)}
     var b=document.createElement("button");
-    b.id="adminBtn";
-    b.className="adminEntry";
-    b.type="button";
-    b.textContent="管理员";
-    b.addEventListener("click",enterAdmin);
-    wrap.appendChild(b);
+    b.id="adminBtn";b.className="adminEntry";b.type="button";b.textContent="管理员";b.addEventListener("click",enterAdmin);wrap.appendChild(b);
   }
-
   moveResultBelowWheel();
   markAdminOnlyBlocks();
   watchCopyAndResult();
-  watchWheel();
-
   var save=document.getElementById("saveBtn");
   if(save){save.textContent="保存线上配置";save.addEventListener("click",saveRemote,true)}
-
   setAdmin(false);
-  loadRemote();
+  /* 远程配置只由 sync.js 加载一次，避免重复读取/重复 resetRound。 */
 }
 
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setupUi,{once:true});else setupUi();
