@@ -7,7 +7,7 @@
   /* 唯一的 Service Worker 注册入口；页面分片中的旧注册会在组装时移除。 */
   function refreshServiceWorker(){
     navigator.serviceWorker
-      .register("./sw.js?b=20260812-0900", {
+      .register("./sw.js?b=20260812-0950", {
         scope: "./",
         updateViaCache: "none"
       })
