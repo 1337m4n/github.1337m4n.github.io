@@ -34,12 +34,7 @@ function normalize(doc){
       var s=doc.slots[i];
       var items=s&&cloneItems(s.items);
       if(s&&items.length>=2){
-        slots[i]={
-          id:i+1,
-          name:String(s.name||("配置 "+(i+1))).trim()||("配置 "+(i+1)),
-          updatedAt:s.updatedAt||doc.updatedAt||now(),
-          items:items
-        };
+        slots[i]={id:i+1,name:String(s.name||("配置 "+(i+1))).trim()||("配置 "+(i+1)),updatedAt:s.updatedAt||doc.updatedAt||now(),items:items};
       }
     }
   }
@@ -84,12 +79,7 @@ async function writeSnapshot(snapshot,mutator,message){
     var p=await fetch(api(),{
       method:"PUT",
       headers:Object.assign({"Content-Type":"application/json"},headers(snapshot.token)),
-      body:JSON.stringify({
-        message:message||"Update wheel profile library",
-        content:encode64(JSON.stringify(doc,null,2)),
-        sha:snapshot.sha,
-        branch:BRANCH
-      })
+      body:JSON.stringify({message:message||"Update wheel profile library",content:encode64(JSON.stringify(doc,null,2)),sha:snapshot.sha,branch:BRANCH})
     });
     if(!p.ok){
       if(p.status===401||p.status===403)throw new Error("TOKEN");
@@ -182,6 +172,14 @@ function hasUnsaved(doc){
 function confirmLoseUnsaved(doc){
   return !hasUnsaved(doc)||confirm("当前轮盘有尚未保存的修改。继续后这些修改会丢失，是否继续？");
 }
+function matchingOtherSlot(doc,items){
+  if(!doc||!Array.isArray(doc.slots))return -1;
+  for(var i=0;i<doc.slots.length;i++){
+    if(i===doc.activeSlot-1)continue;
+    if(doc.slots[i]&&sameItems(items,doc.slots[i].items))return i+1;
+  }
+  return -1;
+}
 
 async function refresh(){
   if(!document.body.classList.contains("adminMode"))return;
@@ -194,7 +192,6 @@ async function refresh(){
 
 async function saveActive(){
   if(!ensureIdle())return;
-  cancelPendingSync();
   var items=wheelItems();
   if(items.length<2){alert("至少需要 2 个选项。");return;}
   try{
@@ -214,6 +211,17 @@ async function saveActive(){
       return;
     }
     var slotNo=snap.doc.activeSlot;
+    var activeSlot=snap.doc.slots[slotNo-1];
+    if(activeSlot&&!sameItems(items,activeSlot.items)){
+      var other=matchingOtherSlot(snap.doc,items);
+      if(other>0){
+        state=snap.doc;
+        render();
+        alert("检测到当前页面内容与槽位 "+other+" 完全一致，但线上当前使用的是槽位 "+slotNo+"。这可能是页面状态已落后。为避免误覆盖，本次未保存；请先切换到正确配置后再操作。");
+        return;
+      }
+    }
+    cancelPendingSync();
     var next=await writeSnapshot(snap,function(doc){
       var old=doc.slots[slotNo-1];
       doc.slots[slotNo-1]={id:slotNo,name:old&&old.name?old.name:("配置 "+slotNo),updatedAt:now(),items:items.slice()};
@@ -227,7 +235,6 @@ async function saveActive(){
 
 async function saveTo(slotNo,name){
   if(!ensureIdle())return;
-  cancelPendingSync();
   var items=wheelItems();
   if(items.length<2){alert("至少需要 2 个选项。");return;}
   name=(name||"").trim()||("配置 "+slotNo);
@@ -239,6 +246,7 @@ async function saveTo(slotNo,name){
     if(occupied&&slotNo!==snap.doc.activeSlot){
       if(!confirm("槽位 "+slotNo+" 已有配置，保存当前轮盘会覆盖它。继续吗？"))return;
     }
+    cancelPendingSync();
     await writeSnapshot(snap,function(doc){
       doc.slots[slotNo-1]={id:slotNo,name:name,updatedAt:now(),items:items.slice()};
     },"Save weekend wheel profile slot "+slotNo);
@@ -248,13 +256,13 @@ async function saveTo(slotNo,name){
 
 async function switchTo(slotNo){
   if(!ensureIdle())return;
-  cancelPendingSync();
   try{
     var snap=await readSnapshot();
     state=snap.doc;
     render();
     if(!snap.doc.slots[slotNo-1]){alert("这个槽位还没有配置。");return;}
     if(!confirmLoseUnsaved(snap.doc))return;
+    cancelPendingSync();
     var next=await writeSnapshot(snap,function(doc){
       if(!doc.slots[slotNo-1])throw new Error("EMPTY_SLOT");
       doc.activeSlot=slotNo;
@@ -266,7 +274,6 @@ async function switchTo(slotNo){
 
 async function newProfile(){
   if(!ensureIdle())return;
-  cancelPendingSync();
   try{
     var snap=await readSnapshot();
     state=snap.doc;
@@ -284,6 +291,7 @@ async function newProfile(){
     var name=(prompt("给这份新配置起个名字：","新轮盘 "+slotNo)||"").trim();
     if(!name)return;
     var blank=["新选项 1","新选项 2"];
+    cancelPendingSync();
     var next=await writeSnapshot(snap,function(doc){
       doc.slots[slotNo-1]={id:slotNo,name:name,updatedAt:now(),items:blank.slice()};
       doc.activeSlot=slotNo;
