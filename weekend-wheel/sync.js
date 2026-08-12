@@ -44,15 +44,35 @@ function getToken(){
   return token;
 }
 
+function wheelBusy(){
+  var btn=document.getElementById("spinBtn");
+  if(!btn) return false;
+  var t=(btn.textContent||"").trim();
+  return t==="停止" || t==="减速中";
+}
+
+function applyWhenIdle(arr){
+  var tries=0;
+  function apply(){
+    if(wheelBusy() && tries++<120){
+      setTimeout(apply,100);
+      return;
+    }
+    if(!window.WeekendWheelApp || !window.WeekendWheelApp.setItems(arr)){
+      console.warn("线上配置内容无效，继续使用当前配置。");
+    }
+  }
+  apply();
+}
+
 async function load(){
   try{
     var r=await fetch("./config.json?t="+Date.now(),{cache:"no-store"});
     if(!r.ok) throw new Error("HTTP "+r.status);
     var data=await r.json();
     var arr=Array.isArray(data)?data:data.items;
-    if(!window.WeekendWheelApp || !window.WeekendWheelApp.setItems(arr)){
-      throw new Error("配置内容无效");
-    }
+    if(!Array.isArray(arr)||arr.length<2) throw new Error("配置内容无效");
+    applyWhenIdle(arr);
   }catch(e){
     console.warn("线上配置读取失败，继续使用本地缓存。",e);
   }
