@@ -15,7 +15,7 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
-  const BUILD="20260812-0930";
+  const BUILD="20260812-0945";
   const parts=[
     "./chunks/part-00.txt?b="+BUILD,
     "./chunks/part-01.txt?b="+BUILD,
@@ -236,7 +236,8 @@ spinBtn.addEventListener("click",spin);`;
       "./mobile-guard.js?b="+BUILD,
       "./wheel-fix.js?b="+BUILD,
       "./mechanical-motion.js?b="+BUILD,
-      "./sw-register.js?b="+BUILD
+      "./sw-register.js?b="+BUILD,
+      "./profile-manager.js?b="+BUILD
     ];
     const extraTags=extras.map(src=>'<script src="'+src+'"></'+'script>').join("");
 
