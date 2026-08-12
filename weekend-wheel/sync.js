@@ -45,6 +45,12 @@ function getToken(){
 }
 
 function wheelBusy(){
+  try{
+    if(window.WeekendWheelRuntime && typeof window.WeekendWheelRuntime.isBusy==="function"){
+      return !!window.WeekendWheelRuntime.isBusy();
+    }
+  }catch(e){}
+
   var btn=document.getElementById("spinBtn");
   if(!btn) return false;
   var t=(btn.textContent||"").trim();
