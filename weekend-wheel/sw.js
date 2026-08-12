@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekend-wheel-pwa-v15-20260812-0900";
+const CACHE_NAME = "weekend-wheel-pwa-v16-20260812-0950";
 const APP_PREFIX = "/weekend-wheel/";
 
 /*
