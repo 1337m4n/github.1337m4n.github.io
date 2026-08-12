@@ -20,6 +20,11 @@ function wheelItems(){return window.WeekendWheelApp&&window.WeekendWheelApp.getI
 function wheelBusy(){try{return!!(window.WeekendWheelRuntime&&window.WeekendWheelRuntime.isBusy&&window.WeekendWheelRuntime.isBusy())}catch(e){return false}}
 function sameItems(a,b){a=cloneItems(a);b=cloneItems(b);if(a.length!==b.length)return false;for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
 function ensureIdle(){if(wheelBusy()){alert("请先停止转盘，再操作配置库。");return false}return true;}
+function cancelPendingSync(){
+  try{
+    if(window.WeekendWheelSync&&typeof window.WeekendWheelSync.cancelPending==="function")window.WeekendWheelSync.cancelPending();
+  }catch(e){}
+}
 
 function normalize(doc){
   doc=doc&&typeof doc==="object"?doc:{};
@@ -189,12 +194,20 @@ async function refresh(){
 
 async function saveActive(){
   if(!ensureIdle())return;
+  cancelPendingSync();
   var items=wheelItems();
   if(items.length<2){alert("至少需要 2 个选项。");return;}
   try{
-    var expectedActive=state&&state.activeSlot;
+    if(!state){
+      var first=await readSnapshot();
+      state=first.doc;
+      render();
+      alert("配置库刚完成同步。请确认当前使用的槽位后，再点击一次“保存当前配置”。");
+      return;
+    }
+    var expectedActive=state.activeSlot;
     var snap=await readSnapshot();
-    if(expectedActive&&snap.doc.activeSlot!==expectedActive){
+    if(snap.doc.activeSlot!==expectedActive){
       state=snap.doc;
       render();
       alert("当前启用的配置刚被其他设备切换过。为避免保存到错误槽位，本次未保存，请确认配置库后重试。");
@@ -214,6 +227,7 @@ async function saveActive(){
 
 async function saveTo(slotNo,name){
   if(!ensureIdle())return;
+  cancelPendingSync();
   var items=wheelItems();
   if(items.length<2){alert("至少需要 2 个选项。");return;}
   name=(name||"").trim()||("配置 "+slotNo);
@@ -234,6 +248,7 @@ async function saveTo(slotNo,name){
 
 async function switchTo(slotNo){
   if(!ensureIdle())return;
+  cancelPendingSync();
   try{
     var snap=await readSnapshot();
     state=snap.doc;
@@ -251,6 +266,7 @@ async function switchTo(slotNo){
 
 async function newProfile(){
   if(!ensureIdle())return;
+  cancelPendingSync();
   try{
     var snap=await readSnapshot();
     state=snap.doc;
@@ -312,7 +328,7 @@ function boot(){
   observeAdmin();
   fetch("./config.json?t="+Date.now(),{cache:"no-store"})
     .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){if(d){state=normalize(d);render();}})
+    .then(function(d){if(d&&!state){state=normalize(d);render();}})
     .catch(function(){});
 }
 
