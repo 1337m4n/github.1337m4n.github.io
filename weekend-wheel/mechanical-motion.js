@@ -5,6 +5,7 @@ var motionWrap=null;
 var rotor=null;
 var wasSpinning=false;
 var settleTimer=0;
+var labelGuardInstalled=false;
 
 function reducedMotion(){
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -31,7 +32,7 @@ function installStyle(){
   height:100%;
 }
 
-/* 起步：轻微预载后迅速释放，模拟实体机构被拨动时的扭矩感。 */
+/* 起步只做很轻的扭矩预载，主旋转仍由核心逻辑控制。 */
 .mechanicalRotorWrap.mechanical-running{
   animation:mechanicalInertia 5.4s cubic-bezier(.16,.84,.28,1) both;
 }
@@ -46,7 +47,7 @@ function installStyle(){
   100%{transform:rotate(0deg)}
 }
 
-/* 落点：越过一点，再反向回摆，最后收住。 */
+/* 停下后越过一点、回摆，再收住。 */
 .mechanicalRotorWrap.mechanical-settle{
   animation:mechanicalSettle .38s cubic-bezier(.22,.76,.24,1) both;
 }
@@ -81,6 +82,34 @@ function installStyle(){
 }
 `;
   document.head.appendChild(style);
+}
+
+/*
+ * 性能保护：核心代码为了让文字始终正向，会在每一帧给所有 SVG 文本 group
+ * 重写 transform。桌面端问题不大，但 Safari / 微信 WebView 容易因此掉帧。
+ * 旋转中不需要文字保持静止正向，所以只拦截这些 group 的 transform 写入；
+ * 转盘停止时 rotor 已移除 is-spinning，核心最后一次 setRotorAngle 会正常写回。
+ */
+function installLabelWriteGuard(){
+  if(labelGuardInstalled || !window.SVGElement) return;
+  labelGuardInstalled=true;
+
+  var originalSetAttribute=SVGElement.prototype.setAttribute;
+  SVGElement.prototype.setAttribute=function(name,value){
+    try{
+      if(
+        name==="transform" &&
+        this.tagName && this.tagName.toLowerCase()==="g" &&
+        this.parentNode && this.parentNode.id==="wheelSvg"
+      ){
+        var liveRotor=document.getElementById("wheelRotor");
+        if(liveRotor && liveRotor.classList.contains("is-spinning")){
+          return;
+        }
+      }
+    }catch(e){}
+    return originalSetAttribute.call(this,name,value);
+  };
 }
 
 function restartClass(name){
@@ -147,6 +176,7 @@ function observeSpinState(){
 
 function boot(){
   installStyle();
+  installLabelWriteGuard();
 
   if(!installRotorLayer()){
     setTimeout(boot,80);
