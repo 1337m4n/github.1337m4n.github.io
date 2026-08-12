@@ -162,7 +162,8 @@ function render(){
 function setPanelBusy(on){
   var p=document.getElementById("profilePanel");
   if(!p)return;
-  Array.from(p.querySelectorAll("button,input")).forEach(function(el){el.disabled=!!on;});
+  if(!on){render();return;}
+  Array.from(p.querySelectorAll("button,input")).forEach(function(el){el.disabled=true;});
 }
 
 async function refresh(){
