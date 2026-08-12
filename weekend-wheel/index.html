@@ -15,7 +15,7 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
-  const BUILD="20260812-0915";
+  const BUILD="20260812-0930";
   const parts=[
     "./chunks/part-00.txt?b="+BUILD,
     "./chunks/part-01.txt?b="+BUILD,
@@ -41,13 +41,11 @@
       ''
     );
 
-    /* 只保留 sw-register.js 一条 Service Worker 注册链。 */
     app=app.replace(
       /<script>\s*if\s*\("serviceWorker"\s+in\s+navigator[\s\S]*?navigator\.serviceWorker\.register\("\.\/sw\.js"\)[\s\S]*?<\/script>/g,
       ''
     );
 
-    /* sync.js 也带构建号，避免首次未受 SW 控制时命中旧 HTTP 缓存。 */
     app=app.replace(
       '<script src="./sync.js"></'+'script>',
       '<script src="./sync.js?b='+BUILD+'"></'+'script>'
@@ -73,6 +71,10 @@ function updateRemain(){
   }else{
     spinBtn.textContent="开始";
   }
+}
+
+function setRotorVisualOnly(deg){
+  rotor.style.transform="rotate("+deg+"deg)";
 }
 
 function resetRound(){
@@ -156,7 +158,6 @@ function startManualSpin(){
   manualVelocity=0;
   lastTickSector=-1;
   rotor.classList.add("is-spinning");
-  resultEl.textContent="转动中，点停止决定落点";
   updateRemain();
 
   function run(ts){
@@ -168,7 +169,7 @@ function startManualSpin(){
 
     manualVelocity+=(manualTargetVelocity-manualVelocity)*Math.min(1,dt*4.8);
     angle+=manualVelocity*dt;
-    setRotorAngle(angle);
+    setRotorVisualOnly(angle);
     tickForAngle(angle);
 
     manualSpinRaf=requestAnimationFrame(run);
@@ -195,7 +196,7 @@ function stopManualSpin(){
     var t=Math.min(1,(ts-startTime)/duration);
     var p=1-Math.pow(1-t,3);
     angle=startAngle+totalDistance*p;
-    setRotorAngle(angle);
+    setRotorVisualOnly(angle);
     tickForAngle(angle);
 
     if(t<1){
@@ -219,6 +220,10 @@ function spin(){
     stopManualSpin();
   }
 }
+
+window.WeekendWheelRuntime={
+  isBusy:function(){return manualSpinPhase==="spinning"||manualSpinPhase==="stopping";}
+};
 
 spinBtn.addEventListener("click",spin);`;
 
