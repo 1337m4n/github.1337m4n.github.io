@@ -15,7 +15,7 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
-  const BUILD="20260812-0900";
+  const BUILD="20260812-0915";
   const parts=[
     "./chunks/part-00.txt?b="+BUILD,
     "./chunks/part-01.txt?b="+BUILD,
@@ -36,27 +36,23 @@
 
     let app=texts.join("");
 
-    /* 直接删除旧说明文字。 */
     app=app.replace(
       '<div class="helper">文字会随停靠位置自动翻正；右侧同色细针精确标记最终落点。</div>',
       ''
     );
 
-    /*
-      旧版分片自身会再次注册 ./sw.js。
-      这里把那段内联注册完整剔除，只保留 sw-register.js 这一条注册链，
-      避免 Safari 在用户首次点击时发生双重注册 / 接管竞争。
-    */
+    /* 只保留 sw-register.js 一条 Service Worker 注册链。 */
     app=app.replace(
       /<script>\s*if\s*\("serviceWorker"\s+in\s+navigator[\s\S]*?navigator\.serviceWorker\.register\("\.\/sw\.js"\)[\s\S]*?<\/script>/g,
       ''
     );
 
-    /*
-      手动启停模式：
-      第一次点击开始持续旋转；第二次点击才触发刹车。
-      最终扇区只由停止时机 + 固定惯性决定，不预先随机选择结果。
-    */
+    /* sync.js 也带构建号，避免首次未受 SW 控制时命中旧 HTTP 缓存。 */
+    app=app.replace(
+      '<script src="./sync.js"></'+'script>',
+      '<script src="./sync.js?b='+BUILD+'"></'+'script>'
+    );
+
     const manualSpinCore=String.raw`
 var manualSpinPhase="idle";
 var manualSpinRaf=0;
