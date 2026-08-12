@@ -1,6 +1,8 @@
 (function(){
 "use strict";
 
+var loadGeneration=0;
+
 function setUi(){
   var btn=document.getElementById("saveBtn");
   if(btn) btn.textContent="保存当前配置";
@@ -33,12 +35,14 @@ function activeItems(data){
   return Array.isArray(data.items)?data.items:[];
 }
 
-function applyWhenIdle(arr){
+function applyWhenIdle(arr,generation){
   function apply(){
+    if(generation!==loadGeneration)return;
     if(wheelBusy()){
       setTimeout(apply,150);
       return;
     }
+    if(generation!==loadGeneration)return;
     if(!window.WeekendWheelApp||!window.WeekendWheelApp.setItems(arr)){
       console.warn("线上配置内容无效，继续使用当前配置。");
     }
@@ -47,16 +51,23 @@ function applyWhenIdle(arr){
 }
 
 async function load(){
+  var generation=++loadGeneration;
   try{
     var r=await fetch("./config.json?t="+Date.now(),{cache:"no-store"});
+    if(generation!==loadGeneration)return;
     if(!r.ok)throw new Error("HTTP "+r.status);
     var data=await r.json();
+    if(generation!==loadGeneration)return;
     var arr=activeItems(data);
     if(!Array.isArray(arr)||arr.length<2)throw new Error("配置内容无效");
-    applyWhenIdle(arr);
+    applyWhenIdle(arr,generation);
   }catch(e){
-    console.warn("线上配置读取失败，继续使用本地缓存。",e);
+    if(generation===loadGeneration)console.warn("线上配置读取失败，继续使用本地缓存。",e);
   }
+}
+
+function cancelPending(){
+  loadGeneration++;
 }
 
 async function save(){
@@ -66,7 +77,7 @@ async function save(){
   alert("配置管理模块尚未加载完成，请稍后再试。");
 }
 
-window.WeekendWheelSync={load:load,save:save};
+window.WeekendWheelSync={load:load,save:save,cancelPending:cancelPending};
 setUi();
 load();
 
