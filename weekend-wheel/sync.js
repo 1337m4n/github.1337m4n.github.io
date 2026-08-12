@@ -52,10 +52,9 @@ function wheelBusy(){
 }
 
 function applyWhenIdle(arr){
-  var tries=0;
   function apply(){
-    if(wheelBusy() && tries++<120){
-      setTimeout(apply,100);
+    if(wheelBusy()){
+      setTimeout(apply,150);
       return;
     }
     if(!window.WeekendWheelApp || !window.WeekendWheelApp.setItems(arr)){
