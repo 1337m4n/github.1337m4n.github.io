@@ -6,12 +6,12 @@
 
   function refreshServiceWorker(){
     navigator.serviceWorker
-      .register("./sw.js?b=20260812-0840", {
+      .register("./sw.js?b=20260812-0900", {
         scope: "./",
         updateViaCache: "none"
       })
       .then(function(registration){
-        /* 每次打开都主动检查一次，不等 Safari 自己的更新周期。 */
+        /* 每次打开主动检查更新，但不主动重载正在使用的页面。 */
         return registration.update();
       })
       .catch(function(){});
