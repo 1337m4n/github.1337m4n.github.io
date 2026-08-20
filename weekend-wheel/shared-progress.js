@@ -16,6 +16,7 @@ function headers(t){var h={"Accept":"application/vnd.github+json","X-GitHub-Api-
 function encode64(s){var a=new TextEncoder().encode(s),x="";for(var i=0;i<a.length;i++)x+=String.fromCharCode(a[i]);return btoa(x);}
 function decode64(s){var bin=atob((s||"").replace(/\s/g,"")),a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new TextDecoder().decode(a);}
 function now(){return new Date().toISOString();}
+function validSlot(n){n=parseInt(n,10);return n>=1&&n<=3?n:0;}
 function emit(status){lastStatus=status;try{window.dispatchEvent(new CustomEvent("weekend-wheel-shared-progress",{detail:{status:status,slot:activeSlot}}));}catch(e){}}
 
 function normalize(doc){
@@ -23,8 +24,8 @@ function normalize(doc){
   var slots=[1,2,3].map(function(n){return {slot:n,completed:[]};});
   if(Array.isArray(doc.slots)){
     doc.slots.forEach(function(s,i){
-      var n=parseInt(s&&s.slot,10)||i+1;
-      if(!(n>=1&&n<=3))return;
+      var n=validSlot(s&&s.slot)||i+1;
+      if(!validSlot(n))return;
       var seen={};
       var rows=[];
       (Array.isArray(s&&s.completed)?s.completed:[]).forEach(function(r){
@@ -59,6 +60,20 @@ async function readPublic(){
   }
 }
 
+async function ensureActiveSlot(){
+  var n=validSlot(activeSlot)||validSlot(window.WeekendWheelActiveSlot);
+  if(n){activeSlot=n;return n;}
+  try{
+    var r=await fetch("./config.json?t="+Date.now(),{cache:"no-store"});
+    var data=r.ok?await r.json():null;
+    n=validSlot(data&&data.activeSlot)||1;
+  }catch(e){n=1;}
+  activeSlot=n;
+  window.WeekendWheelActiveSlot=n;
+  if(window.WeekendWheelRuntime&&typeof window.WeekendWheelRuntime.setProfileSlot==="function")window.WeekendWheelRuntime.setProfileSlot(n);
+  return n;
+}
+
 function rowsFor(doc,slot){return doc&&doc.slots&&doc.slots[slot-1]?doc.slots[slot-1].completed:[];}
 function applyRows(rows){
   var rt=window.WeekendWheelRuntime;
@@ -67,17 +82,14 @@ function applyRows(rows){
 }
 
 async function refresh(){
-  if(!(activeSlot>=1&&activeSlot<=3))return false;
+  var slot=await ensureActiveSlot();
   emit("loading");
   try{
     var doc=await readPublic();
-    applyRows(rowsFor(doc,activeSlot));
+    applyRows(rowsFor(doc,slot));
     emit("synced");
     return true;
-  }catch(e){
-    emit("read-failed");
-    return false;
-  }
+  }catch(e){emit("read-failed");return false;}
 }
 
 async function writeMutation(mutator){
@@ -94,7 +106,8 @@ async function writeMutation(mutator){
       body:JSON.stringify({message:"Update shared wheel progress",content:encode64(JSON.stringify(doc,null,2)),sha:snap.sha,branch:BRANCH})
     });
     if(r.ok){
-      if(activeSlot>=1&&activeSlot<=3)applyRows(rowsFor(doc,activeSlot));
+      var slot=await ensureActiveSlot();
+      applyRows(rowsFor(doc,slot));
       emit("synced");
       return doc;
     }
@@ -113,10 +126,10 @@ function describe(index){
   return rt&&typeof rt.describeIndex==="function"?rt.describeIndex(index):null;
 }
 
-function addCompletedByIndex(index,silent){
+async function addCompletedByIndex(index,silent){
   var row=describe(index);
-  var slot=activeSlot;
-  if(!row||!(slot>=1&&slot<=3))return Promise.resolve(false);
+  var slot=await ensureActiveSlot();
+  if(!row)return false;
   return enqueue(function(doc){
     var s=doc.slots[slot-1];
     s.completed=s.completed.filter(function(x){return x.key!==row.key;});
@@ -124,24 +137,23 @@ function addCompletedByIndex(index,silent){
   },silent!==false);
 }
 
-function removeCompletedByIndex(index,silent){
+async function removeCompletedByIndex(index,silent){
   var row=describe(index);
-  var slot=activeSlot;
-  if(!row||!(slot>=1&&slot<=3))return Promise.resolve(false);
+  var slot=await ensureActiveSlot();
+  if(!row)return false;
   return enqueue(function(doc){
     doc.slots[slot-1].completed=doc.slots[slot-1].completed.filter(function(x){return x.key!==row.key;});
   },silent!==false);
 }
 
-function clearSlot(silent){
-  var slot=activeSlot;
-  if(!(slot>=1&&slot<=3))return Promise.resolve(false);
+async function clearSlot(silent){
+  var slot=await ensureActiveSlot();
   return enqueue(function(doc){doc.slots[slot-1].completed=[];},silent!==false);
 }
 
 async function setSlot(slotNo){
-  slotNo=parseInt(slotNo,10);
-  if(!(slotNo>=1&&slotNo<=3))return false;
+  slotNo=validSlot(slotNo);
+  if(!slotNo)return false;
   activeSlot=slotNo;
   window.WeekendWheelActiveSlot=slotNo;
   if(window.WeekendWheelRuntime&&typeof window.WeekendWheelRuntime.setProfileSlot==="function")window.WeekendWheelRuntime.setProfileSlot(slotNo);
@@ -149,15 +161,8 @@ async function setSlot(slotNo){
 }
 
 async function boot(){
-  try{
-    var r=await fetch("./config.json?t="+Date.now(),{cache:"no-store"});
-    var data=r.ok?await r.json():null;
-    var slot=parseInt(data&&data.activeSlot,10);
-    if(!(slot>=1&&slot<=3))slot=1;
-    await setSlot(slot);
-  }catch(e){
-    await setSlot(1);
-  }
+  await ensureActiveSlot();
+  await refresh();
 }
 
 window.WeekendWheelSharedProgress={
