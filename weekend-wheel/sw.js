@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekend-wheel-pwa-v18-20260820-1042";
+const CACHE_NAME = "weekend-wheel-pwa-v19-20260820-1058";
 const APP_PREFIX = "/weekend-wheel/";
 
 self.addEventListener("install", (event) => {
@@ -19,7 +19,6 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith(APP_PREFIX)) return;
 
@@ -34,7 +33,6 @@ self.addEventListener("fetch", (event) => {
     } catch (e) {
       const cached = await caches.match(event.request);
       if (cached) return cached;
-
       if (event.request.mode === "navigate") {
         const index = await caches.match(new URL("./index.html", self.location.href).href);
         if (index) return index;
