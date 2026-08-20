@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekend-wheel-pwa-v17-20260820-1034";
+const CACHE_NAME = "weekend-wheel-pwa-v18-20260820-1042";
 const APP_PREFIX = "/weekend-wheel/";
 
 self.addEventListener("install", (event) => {
