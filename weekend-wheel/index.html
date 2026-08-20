@@ -15,7 +15,7 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
-  const BUILD="20260820-1034";
+  const BUILD="20260820-1042";
   const parts=[
     "./chunks/part-00.txt?b="+BUILD,
     "./chunks/part-01.txt?b="+BUILD,
@@ -58,6 +58,8 @@ var manualLastTime=0;
 var manualVelocity=0;
 var manualTargetVelocity=760;
 var manualBrakeDuration=520;
+var progressSlot=0;
+var COMPLETED_PREFIX="weekendWheelCompletedV2:";
 
 if(noRepeatEl) noRepeatEl.checked=true;
 
@@ -79,20 +81,80 @@ function setRotorVisualOnly(deg){
   rotor.style.transform="rotate("+deg+"deg)";
 }
 
-function resetRound(){
+function listFingerprint(){
+  var raw=items.map(function(x,i){return i+":"+String(x);}).join("\u241f");
+  var h=2166136261;
+  for(var i=0;i<raw.length;i++){
+    h^=raw.charCodeAt(i);
+    h+=(h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24);
+  }
+  return (h>>>0).toString(36);
+}
+
+function progressKey(){
+  var slot=parseInt(progressSlot||window.WeekendWheelActiveSlot,10);
+  if(slot>=1&&slot<=3) return COMPLETED_PREFIX+"slot-"+slot;
+  return COMPLETED_PREFIX+"list-"+listFingerprint();
+}
+
+function loadCompleted(){
+  var raw="";
+  try{raw=localStorage.getItem(progressKey())||"";}catch(e){return [];}
+  if(!raw) return [];
+
+  var saved;
+  try{saved=JSON.parse(raw);}catch(e){return [];}
+  if(!Array.isArray(saved)) return [];
+
+  var seen={};
+  var out=[];
+  saved.forEach(function(row){
+    var idx=typeof row==="number"?row:parseInt(row&&row.index,10);
+    var text=typeof row==="number"?(items[idx]||""):String(row&&row.text!=null?row.text:"");
+    if(!(idx>=0&&idx<items.length)) return;
+    if(items[idx]!==text) return;
+    if(seen[idx]) return;
+    seen[idx]=true;
+    out.push(idx);
+  });
+  return out;
+}
+
+function persistCompleted(){
+  var rows=history.map(function(idx){
+    return {index:idx,text:items[idx]||""};
+  });
+  try{localStorage.setItem(progressKey(),JSON.stringify(rows));}catch(e){}
+}
+
+function rebuildFromCompleted(){
+  history=loadCompleted();
+  var done={};
+  history.forEach(function(idx){done[idx]=true;});
+  active=items.map(function(_,i){return i;}).filter(function(i){return !done[i];});
+}
+
+function resetRound(clearProgress){
   if(manualSpinRaf) cancelAnimationFrame(manualSpinRaf);
   manualSpinRaf=0;
   manualSpinPhase="idle";
   manualLastTime=0;
   manualVelocity=0;
-  active=items.map(function(_,i){return i;});
-  history=[];
   spinning=false;
   rotor.classList.remove("is-spinning");
   angle=0;
   lastTickSector=-1;
+
+  if(clearProgress){
+    history=[];
+    persistCompleted();
+    active=items.map(function(_,i){return i;});
+  }else{
+    rebuildFromCompleted();
+  }
+
   setRotorAngle(0);
-  resultEl.textContent="等你开始";
+  resultEl.textContent=history.length?(items[history[history.length-1]]||"已完成项目"):"等你开始";
   buildWheel();
   renderHistory();
   updateRemain();
@@ -134,12 +196,33 @@ function restoreCompletedIndex(idx){
     active.push(idx);
     active.sort(function(a,b){return a-b;});
   }
+  persistCompleted();
 
   angle=0;
   lastTickSector=-1;
   setRotorAngle(0);
   buildWheel();
-  resultEl.textContent=history.length?items[history[history.length-1]]:"等你开始";
+  resultEl.textContent=history.length?(items[history[history.length-1]]||"已完成项目"):"等你开始";
+  renderHistory();
+  updateRemain();
+  return true;
+}
+
+function restoreLastCompleted(){
+  if(!history.length) return false;
+  return restoreCompletedIndex(history[history.length-1]);
+}
+
+function clearCompleted(){
+  if(manualSpinPhase!=="idle") return false;
+  history=[];
+  active=items.map(function(_,i){return i;});
+  persistCompleted();
+  angle=0;
+  lastTickSector=-1;
+  setRotorAngle(0);
+  buildWheel();
+  resultEl.textContent="等你开始";
   renderHistory();
   updateRemain();
   return true;
@@ -159,19 +242,17 @@ function finishManualSpin(){
   }
 
   var chosenIdx=active[chosenPos];
-
-  /* 成果列表只表示“当前已经移出轮盘”的项目，同一项目最多保留一次。 */
   history=history.filter(function(idx){return idx!==chosenIdx;});
   history.push(chosenIdx);
   resultEl.textContent=items[chosenIdx];
 
-  /* 新规则：每次转到后都自动移出后续候选，不再依赖“不重复抽取”开关。 */
   active=active.filter(function(idx){return idx!==chosenIdx;});
+  persistCompleted();
+
   angle=0;
   lastTickSector=-1;
   setRotorAngle(0);
   buildWheel();
-
   renderHistory();
   updateRemain();
 }
@@ -250,10 +331,19 @@ function spin(){
 
 window.WeekendWheelRuntime={
   isBusy:function(){return manualSpinPhase==="spinning"||manualSpinPhase==="stopping";},
+  setProfileSlot:function(slotNo){
+    slotNo=parseInt(slotNo,10);
+    progressSlot=(slotNo>=1&&slotNo<=3)?slotNo:0;
+    if(progressSlot) window.WeekendWheelActiveSlot=progressSlot;
+    return progressSlot;
+  },
   getCompleted:function(){
     return history.map(function(idx){return {index:idx,text:items[idx]||"已删除项目"};});
   },
-  restoreCompleted:function(idx){return restoreCompletedIndex(idx);}
+  restoreCompleted:function(idx){return restoreCompletedIndex(idx);},
+  restoreLastCompleted:function(){return restoreLastCompleted();},
+  clearCompleted:function(){return clearCompleted();},
+  reloadCompleted:function(){if(manualSpinPhase!=="idle")return false;resetRound(false);return true;}
 };
 
 spinBtn.addEventListener("click",spin);`;
