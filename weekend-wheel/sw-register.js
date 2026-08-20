@@ -6,7 +6,7 @@
 
   function refreshServiceWorker(){
     navigator.serviceWorker
-      .register("./sw.js?b=20260820-1042", {
+      .register("./sw.js?b=20260820-1058", {
         scope: "./",
         updateViaCache: "none"
       })
@@ -16,9 +16,6 @@
       .catch(function(){});
   }
 
-  if (document.readyState === "complete") {
-    refreshServiceWorker();
-  } else {
-    window.addEventListener("load", refreshServiceWorker, { once: true });
-  }
+  if (document.readyState === "complete") refreshServiceWorker();
+  else window.addEventListener("load", refreshServiceWorker, { once: true });
 })();
