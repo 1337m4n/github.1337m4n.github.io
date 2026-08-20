@@ -108,10 +108,6 @@ function fontSizeForCount(count){
 }
 
 function pastelRainbow(index,count){
-  /*
-    低饱和淡彩虹：从珊瑚粉开始，沿色环顺时针完整走一圈。
-    每次数量变化都会按当前 count 重新均分色相，因此不会重复固定 7 色。
-  */
   var startHue=350;
   var hue=(startHue + index*(360/count))%360;
   var saturation=isCompact()?44:42;
@@ -126,6 +122,11 @@ function applyWheelEnhancements(){
   var paths=getSectorPaths(svg);
   var count=paths.length;
   if(!count) return;
+
+  /* SVG 单条 360° arc 起终点重合时不会稳定绘制整圆，最后一项改为双半圆。 */
+  if(count===1){
+    paths[0].setAttribute("d","M 300 14 A 286 286 0 1 1 300 586 A 286 286 0 1 1 300 14 Z");
+  }
 
   paths.forEach(function(path,i){
     path.setAttribute("fill",pastelRainbow(i,count));
