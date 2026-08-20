@@ -2,6 +2,7 @@
 "use strict";
 
 var historyObserver=null;
+var appPatched=false;
 
 function installStyle(){
   if(document.getElementById("wheelAchievementsStyle")) return;
@@ -103,6 +104,11 @@ function render(){
   count.textContent=arr.length+" 项";
   list.innerHTML="";
 
+  var undo=document.getElementById("undoBtn");
+  var reset=document.getElementById("resetBtn");
+  if(undo&&undo.dataset.achievementOwned==="1") undo.disabled=arr.length===0;
+  if(reset&&reset.dataset.achievementOwned==="1") reset.disabled=arr.length===0;
+
   if(!arr.length){
     var empty=document.createElement("div");
     empty.className="achievementEmpty";
@@ -139,6 +145,56 @@ function render(){
   });
 }
 
+function replaceControls(){
+  var reset=document.getElementById("resetBtn");
+  if(reset&&reset.dataset.achievementOwned!=="1"){
+    var resetNew=reset.cloneNode(true);
+    resetNew.dataset.achievementOwned="1";
+    resetNew.textContent="重置成果";
+    reset.parentNode.replaceChild(resetNew,reset);
+    resetNew.addEventListener("click",function(){
+      if(!results().length) return;
+      if(!confirm("确定清空当前配置的全部成果记录，并把所有选项重新放回轮盘吗？")) return;
+      if(window.WeekendWheelRuntime&&typeof window.WeekendWheelRuntime.clearCompleted==="function"){
+        window.WeekendWheelRuntime.clearCompleted();
+      }
+    });
+  }
+
+  var undo=document.getElementById("undoBtn");
+  if(undo&&undo.dataset.achievementOwned!=="1"){
+    var undoNew=undo.cloneNode(true);
+    undoNew.dataset.achievementOwned="1";
+    undoNew.textContent="撤回上次";
+    undo.parentNode.replaceChild(undoNew,undo);
+    undoNew.addEventListener("click",function(){
+      if(window.WeekendWheelRuntime&&typeof window.WeekendWheelRuntime.restoreLastCompleted==="function"){
+        window.WeekendWheelRuntime.restoreLastCompleted();
+      }
+    });
+  }
+}
+
+function activeSlotFromProfileUi(){
+  var el=document.querySelector("#profileGrid .profileCard.active .profileSlot");
+  var m=el&&String(el.textContent||"").match(/(\d+)/);
+  var n=m?parseInt(m[1],10):parseInt(window.WeekendWheelActiveSlot,10);
+  return n>=1&&n<=3?n:0;
+}
+
+function patchAppSetItems(){
+  if(appPatched||!window.WeekendWheelApp||typeof window.WeekendWheelApp.setItems!=="function") return;
+  var original=window.WeekendWheelApp.setItems;
+  window.WeekendWheelApp.setItems=function(arr){
+    var slot=activeSlotFromProfileUi();
+    if(slot&&window.WeekendWheelRuntime&&typeof window.WeekendWheelRuntime.setProfileSlot==="function"){
+      window.WeekendWheelRuntime.setProfileSlot(slot);
+    }
+    return original.call(window.WeekendWheelApp,arr);
+  };
+  appPatched=true;
+}
+
 function watchHistory(){
   var history=document.getElementById("history");
   if(!history||historyObserver) return;
@@ -155,6 +211,8 @@ function boot(){
     return;
   }
 
+  replaceControls();
+  patchAppSetItems();
   ensurePanel();
   watchHistory();
   render();
