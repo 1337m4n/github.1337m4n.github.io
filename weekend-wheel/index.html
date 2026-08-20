@@ -15,7 +15,7 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
-  const BUILD="20260812-0951";
+  const BUILD="20260820-1034";
   const parts=[
     "./chunks/part-00.txt?b="+BUILD,
     "./chunks/part-01.txt?b="+BUILD,
@@ -59,8 +59,10 @@ var manualVelocity=0;
 var manualTargetVelocity=760;
 var manualBrakeDuration=520;
 
+if(noRepeatEl) noRepeatEl.checked=true;
+
 function updateRemain(){
-  remainEl.textContent="当前 "+active.length+" 个候选";
+  remainEl.textContent="剩余 "+active.length+" 个候选";
   spinBtn.disabled=active.length===0 || manualSpinPhase==="stopping";
   if(active.length===0){
     spinBtn.textContent="完成";
@@ -121,6 +123,28 @@ function chosenPositionAtPointer(current){
   return Math.floor((localAngle+slice/2)/slice)%n;
 }
 
+function restoreCompletedIndex(idx){
+  if(manualSpinPhase!=="idle") return false;
+  idx=parseInt(idx,10);
+  if(!(idx>=0&&idx<items.length)) return false;
+  if(history.indexOf(idx)===-1) return false;
+
+  history=history.filter(function(x){return x!==idx;});
+  if(active.indexOf(idx)===-1){
+    active.push(idx);
+    active.sort(function(a,b){return a-b;});
+  }
+
+  angle=0;
+  lastTickSector=-1;
+  setRotorAngle(0);
+  buildWheel();
+  resultEl.textContent=history.length?items[history[history.length-1]]:"等你开始";
+  renderHistory();
+  updateRemain();
+  return true;
+}
+
 function finishManualSpin(){
   manualSpinPhase="idle";
   spinning=false;
@@ -135,15 +159,18 @@ function finishManualSpin(){
   }
 
   var chosenIdx=active[chosenPos];
+
+  /* 成果列表只表示“当前已经移出轮盘”的项目，同一项目最多保留一次。 */
+  history=history.filter(function(idx){return idx!==chosenIdx;});
   history.push(chosenIdx);
   resultEl.textContent=items[chosenIdx];
 
-  if(noRepeatEl.checked){
-    active=active.filter(function(idx){return idx!==chosenIdx;});
-    angle=0;
-    setRotorAngle(0);
-    buildWheel();
-  }
+  /* 新规则：每次转到后都自动移出后续候选，不再依赖“不重复抽取”开关。 */
+  active=active.filter(function(idx){return idx!==chosenIdx;});
+  angle=0;
+  lastTickSector=-1;
+  setRotorAngle(0);
+  buildWheel();
 
   renderHistory();
   updateRemain();
@@ -222,7 +249,11 @@ function spin(){
 }
 
 window.WeekendWheelRuntime={
-  isBusy:function(){return manualSpinPhase==="spinning"||manualSpinPhase==="stopping";}
+  isBusy:function(){return manualSpinPhase==="spinning"||manualSpinPhase==="stopping";},
+  getCompleted:function(){
+    return history.map(function(idx){return {index:idx,text:items[idx]||"已删除项目"};});
+  },
+  restoreCompleted:function(idx){return restoreCompletedIndex(idx);}
 };
 
 spinBtn.addEventListener("click",spin);`;
@@ -237,7 +268,8 @@ spinBtn.addEventListener("click",spin);`;
       "./wheel-fix.js?b="+BUILD,
       "./mechanical-motion.js?b="+BUILD,
       "./sw-register.js?b="+BUILD,
-      "./profile-manager.js?b="+BUILD
+      "./profile-manager.js?b="+BUILD,
+      "./achievements.js?b="+BUILD
     ];
     const extraTags=extras.map(src=>'<script src="'+src+'"></'+'script>').join("");
 
