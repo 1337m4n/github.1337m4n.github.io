@@ -13,7 +13,7 @@ function setUi(){
   }
 
   var footer=document.querySelector(".footer");
-  if(footer) footer.textContent="支持 3 份线上配置 · 本地离线缓存";
+  if(footer) footer.textContent="支持 3 份线上配置 · 成果持续记录";
 }
 
 function wheelBusy(){
@@ -23,19 +23,19 @@ function wheelBusy(){
   return false;
 }
 
-function activeItems(data){
-  if(!data||typeof data!=="object")return [];
+function activeSelection(data){
+  if(!data||typeof data!=="object")return {slot:0,items:[]};
   if(Number(data.version)>=2&&Array.isArray(data.slots)){
     var n=parseInt(data.activeSlot,10);
     if(n>=1&&n<=3){
       var slot=data.slots[n-1];
-      if(slot&&Array.isArray(slot.items)&&slot.items.length>=2)return slot.items;
+      if(slot&&Array.isArray(slot.items)&&slot.items.length>=2)return {slot:n,items:slot.items};
     }
   }
-  return Array.isArray(data.items)?data.items:[];
+  return {slot:0,items:Array.isArray(data.items)?data.items:[]};
 }
 
-function applyWhenIdle(arr,generation){
+function applyWhenIdle(arr,generation,slotNo){
   function apply(){
     if(generation!==loadGeneration)return;
     if(wheelBusy()){
@@ -43,6 +43,16 @@ function applyWhenIdle(arr,generation){
       return;
     }
     if(generation!==loadGeneration)return;
+
+    if(slotNo>=1&&slotNo<=3){
+      window.WeekendWheelActiveSlot=slotNo;
+      try{
+        if(window.WeekendWheelRuntime&&typeof window.WeekendWheelRuntime.setProfileSlot==="function"){
+          window.WeekendWheelRuntime.setProfileSlot(slotNo);
+        }
+      }catch(e){}
+    }
+
     if(!window.WeekendWheelApp||!window.WeekendWheelApp.setItems(arr)){
       console.warn("线上配置内容无效，继续使用当前配置。");
     }
@@ -58,9 +68,9 @@ async function load(){
     if(!r.ok)throw new Error("HTTP "+r.status);
     var data=await r.json();
     if(generation!==loadGeneration)return;
-    var arr=activeItems(data);
-    if(!Array.isArray(arr)||arr.length<2)throw new Error("配置内容无效");
-    applyWhenIdle(arr,generation);
+    var selection=activeSelection(data);
+    if(!Array.isArray(selection.items)||selection.items.length<2)throw new Error("配置内容无效");
+    applyWhenIdle(selection.items,generation,selection.slot);
   }catch(e){
     if(generation===loadGeneration)console.warn("线上配置读取失败，继续使用本地缓存。",e);
   }
