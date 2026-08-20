@@ -6,7 +6,7 @@
 
   function refreshServiceWorker(){
     navigator.serviceWorker
-      .register("./sw.js?b=20260820-1034", {
+      .register("./sw.js?b=20260820-1042", {
         scope: "./",
         updateViaCache: "none"
       })
