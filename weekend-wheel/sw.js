@@ -1,13 +1,6 @@
-const CACHE_NAME = "weekend-wheel-pwa-v16-20260812-0950";
+const CACHE_NAME = "weekend-wheel-pwa-v17-20260820-1034";
 const APP_PREFIX = "/weekend-wheel/";
 
-/*
- * 安全更新策略：
- * 1. 新 SW 立即激活；
- * 2. 激活时清理旧的 weekend-wheel 缓存；
- * 3. 接管后不主动 navigate 当前页面，避免用户点击转盘时被强制重载；
- * 4. 在线时站内资源网络优先，断网才回退缓存。
- */
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -20,7 +13,6 @@ self.addEventListener("activate", (event) => {
         .filter((key) => key.startsWith("weekend-wheel-") && key !== CACHE_NAME)
         .map((key) => caches.delete(key))
     );
-
     await self.clients.claim();
   })());
 });
@@ -34,12 +26,10 @@ self.addEventListener("fetch", (event) => {
   event.respondWith((async () => {
     try {
       const response = await fetch(event.request, { cache: "no-store" });
-
       if (response && response.ok) {
         const cache = await caches.open(CACHE_NAME);
         await cache.put(event.request, response.clone());
       }
-
       return response;
     } catch (e) {
       const cached = await caches.match(event.request);
@@ -49,7 +39,6 @@ self.addEventListener("fetch", (event) => {
         const index = await caches.match(new URL("./index.html", self.location.href).href);
         if (index) return index;
       }
-
       throw e;
     }
   })());
