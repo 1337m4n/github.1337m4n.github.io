@@ -15,7 +15,7 @@
 <body><div class="loading"><span class="dot"></span><div style="margin-top:12px">正在打开转盘…</div></div>
 <script>
 (async()=>{
-  const BUILD="20260820-1042";
+  const BUILD="20260820-1055";
   const parts=[
     "./chunks/part-00.txt?b="+BUILD,
     "./chunks/part-01.txt?b="+BUILD,
@@ -59,7 +59,7 @@ var manualVelocity=0;
 var manualTargetVelocity=760;
 var manualBrakeDuration=520;
 var progressSlot=0;
-var COMPLETED_PREFIX="weekendWheelCompletedV2:";
+var COMPLETED_PREFIX="weekendWheelCompletedV3:";
 
 if(noRepeatEl) noRepeatEl.checked=true;
 
@@ -81,6 +81,27 @@ function setRotorVisualOnly(deg){
   rotor.style.transform="rotate("+deg+"deg)";
 }
 
+function itemKeyForIndex(idx){
+  idx=parseInt(idx,10);
+  if(!(idx>=0&&idx<items.length)) return "";
+  var text=String(items[idx]);
+  var occurrence=0;
+  for(var i=0;i<=idx;i++) if(String(items[i])===text) occurrence++;
+  return text+"\u241e"+occurrence;
+}
+
+function indexForItemKey(key){
+  key=String(key||"");
+  for(var i=0;i<items.length;i++) if(itemKeyForIndex(i)===key) return i;
+  return -1;
+}
+
+function describeIndex(idx){
+  idx=parseInt(idx,10);
+  if(!(idx>=0&&idx<items.length)) return null;
+  return {index:idx,key:itemKeyForIndex(idx),text:String(items[idx]||"")};
+}
+
 function listFingerprint(){
   var raw=items.map(function(x,i){return i+":"+String(x);}).join("\u241f");
   var h=2166136261;
@@ -97,22 +118,18 @@ function progressKey(){
   return COMPLETED_PREFIX+"list-"+listFingerprint();
 }
 
-function loadCompleted(){
-  var raw="";
-  try{raw=localStorage.getItem(progressKey())||"";}catch(e){return [];}
-  if(!raw) return [];
-
-  var saved;
-  try{saved=JSON.parse(raw);}catch(e){return [];}
+function normalizeCompletedRows(saved){
   if(!Array.isArray(saved)) return [];
-
   var seen={};
   var out=[];
   saved.forEach(function(row){
-    var idx=typeof row==="number"?row:parseInt(row&&row.index,10);
-    var text=typeof row==="number"?(items[idx]||""):String(row&&row.text!=null?row.text:"");
-    if(!(idx>=0&&idx<items.length)) return;
-    if(items[idx]!==text) return;
+    var idx=-1;
+    if(row&&typeof row==="object"&&row.key) idx=indexForItemKey(row.key);
+    if(idx<0){
+      idx=typeof row==="number"?row:parseInt(row&&row.index,10);
+      var text=typeof row==="number"?(items[idx]||""):String(row&&row.text!=null?row.text:"");
+      if(!(idx>=0&&idx<items.length)||items[idx]!==text) return;
+    }
     if(seen[idx]) return;
     seen[idx]=true;
     out.push(idx);
@@ -120,10 +137,18 @@ function loadCompleted(){
   return out;
 }
 
+function loadCompleted(){
+  var raw="";
+  try{raw=localStorage.getItem(progressKey())||"";}catch(e){return [];}
+  if(!raw) return [];
+  try{return normalizeCompletedRows(JSON.parse(raw));}catch(e){return [];}
+}
+
 function persistCompleted(){
   var rows=history.map(function(idx){
-    return {index:idx,text:items[idx]||""};
-  });
+    var d=describeIndex(idx);
+    return d?{key:d.key,index:d.index,text:d.text}:null;
+  }).filter(Boolean);
   try{localStorage.setItem(progressKey(),JSON.stringify(rows));}catch(e){}
 }
 
@@ -134,6 +159,16 @@ function rebuildFromCompleted(){
   active=items.map(function(_,i){return i;}).filter(function(i){return !done[i];});
 }
 
+function renderProgressState(){
+  angle=0;
+  lastTickSector=-1;
+  setRotorAngle(0);
+  buildWheel();
+  resultEl.textContent=history.length?(items[history[history.length-1]]||"已完成项目"):"等你开始";
+  renderHistory();
+  updateRemain();
+}
+
 function resetRound(clearProgress){
   if(manualSpinRaf) cancelAnimationFrame(manualSpinRaf);
   manualSpinRaf=0;
@@ -142,22 +177,26 @@ function resetRound(clearProgress){
   manualVelocity=0;
   spinning=false;
   rotor.classList.remove("is-spinning");
-  angle=0;
-  lastTickSector=-1;
 
   if(clearProgress){
     history=[];
-    persistCompleted();
     active=items.map(function(_,i){return i;});
+    persistCompleted();
   }else{
     rebuildFromCompleted();
   }
+  renderProgressState();
+}
 
-  setRotorAngle(0);
-  resultEl.textContent=history.length?(items[history[history.length-1]]||"已完成项目"):"等你开始";
-  buildWheel();
-  renderHistory();
-  updateRemain();
+function applySharedCompleted(rows){
+  if(manualSpinPhase!=="idle") return false;
+  history=normalizeCompletedRows(rows);
+  var done={};
+  history.forEach(function(idx){done[idx]=true;});
+  active=items.map(function(_,i){return i;}).filter(function(i){return !done[i];});
+  persistCompleted();
+  renderProgressState();
+  return true;
 }
 
 function bumpPointer(){
@@ -185,26 +224,28 @@ function chosenPositionAtPointer(current){
   return Math.floor((localAngle+slice/2)/slice)%n;
 }
 
+function markCompletedIndex(idx){
+  if(manualSpinPhase!=="idle") return false;
+  idx=parseInt(idx,10);
+  if(!(idx>=0&&idx<items.length)) return false;
+  if(active.indexOf(idx)===-1) return false;
+  history=history.filter(function(x){return x!==idx;});
+  history.push(idx);
+  active=active.filter(function(x){return x!==idx;});
+  persistCompleted();
+  renderProgressState();
+  return true;
+}
+
 function restoreCompletedIndex(idx){
   if(manualSpinPhase!=="idle") return false;
   idx=parseInt(idx,10);
   if(!(idx>=0&&idx<items.length)) return false;
   if(history.indexOf(idx)===-1) return false;
-
   history=history.filter(function(x){return x!==idx;});
-  if(active.indexOf(idx)===-1){
-    active.push(idx);
-    active.sort(function(a,b){return a-b;});
-  }
+  if(active.indexOf(idx)===-1){active.push(idx);active.sort(function(a,b){return a-b;});}
   persistCompleted();
-
-  angle=0;
-  lastTickSector=-1;
-  setRotorAngle(0);
-  buildWheel();
-  resultEl.textContent=history.length?(items[history[history.length-1]]||"已完成项目"):"等你开始";
-  renderHistory();
-  updateRemain();
+  renderProgressState();
   return true;
 }
 
@@ -218,13 +259,7 @@ function clearCompleted(){
   history=[];
   active=items.map(function(_,i){return i;});
   persistCompleted();
-  angle=0;
-  lastTickSector=-1;
-  setRotorAngle(0);
-  buildWheel();
-  resultEl.textContent="等你开始";
-  renderHistory();
-  updateRemain();
+  renderProgressState();
   return true;
 }
 
@@ -236,16 +271,12 @@ function finishManualSpin(){
   setRotorAngle(angle);
 
   var chosenPos=chosenPositionAtPointer(angle);
-  if(chosenPos<0){
-    updateRemain();
-    return;
-  }
+  if(chosenPos<0){updateRemain();return;}
 
   var chosenIdx=active[chosenPos];
   history=history.filter(function(idx){return idx!==chosenIdx;});
   history.push(chosenIdx);
   resultEl.textContent=items[chosenIdx];
-
   active=active.filter(function(idx){return idx!==chosenIdx;});
   persistCompleted();
 
@@ -255,11 +286,14 @@ function finishManualSpin(){
   buildWheel();
   renderHistory();
   updateRemain();
+
+  if(window.WeekendWheelSharedProgress&&typeof window.WeekendWheelSharedProgress.addCompletedByIndex==="function"){
+    window.WeekendWheelSharedProgress.addCompletedByIndex(chosenIdx,true);
+  }
 }
 
 function startManualSpin(){
   if(active.length===0 || manualSpinPhase!=="idle") return;
-
   spinning=true;
   manualSpinPhase="spinning";
   manualLastTime=0;
@@ -271,24 +305,19 @@ function startManualSpin(){
   function run(ts){
     if(manualSpinPhase!=="spinning") return;
     if(!manualLastTime) manualLastTime=ts;
-
     var dt=Math.min(.04,(ts-manualLastTime)/1000);
     manualLastTime=ts;
-
     manualVelocity+=(manualTargetVelocity-manualVelocity)*Math.min(1,dt*4.8);
     angle+=manualVelocity*dt;
     setRotorVisualOnly(angle);
     tickForAngle(angle);
-
     manualSpinRaf=requestAnimationFrame(run);
   }
-
   manualSpinRaf=requestAnimationFrame(run);
 }
 
 function stopManualSpin(){
   if(manualSpinPhase!=="spinning") return;
-
   manualSpinPhase="stopping";
   if(manualSpinRaf) cancelAnimationFrame(manualSpinRaf);
   manualSpinRaf=0;
@@ -306,27 +335,18 @@ function stopManualSpin(){
     angle=startAngle+totalDistance*p;
     setRotorVisualOnly(angle);
     tickForAngle(angle);
-
-    if(t<1){
-      manualSpinRaf=requestAnimationFrame(brake);
-      return;
-    }
-
+    if(t<1){manualSpinRaf=requestAnimationFrame(brake);return;}
     manualSpinRaf=0;
     manualVelocity=0;
     finishManualSpin();
   }
-
   manualSpinRaf=requestAnimationFrame(brake);
 }
 
 function spin(){
   if(active.length===0) return;
-  if(manualSpinPhase==="idle"){
-    startManualSpin();
-  }else if(manualSpinPhase==="spinning"){
-    stopManualSpin();
-  }
+  if(manualSpinPhase==="idle") startManualSpin();
+  else if(manualSpinPhase==="spinning") stopManualSpin();
 }
 
 window.WeekendWheelRuntime={
@@ -337,13 +357,15 @@ window.WeekendWheelRuntime={
     if(progressSlot) window.WeekendWheelActiveSlot=progressSlot;
     return progressSlot;
   },
-  getCompleted:function(){
-    return history.map(function(idx){return {index:idx,text:items[idx]||"已删除项目"};});
-  },
+  describeIndex:function(idx){return describeIndex(idx);},
+  getCompleted:function(){return history.map(function(idx){return describeIndex(idx);}).filter(Boolean);},
+  getRemaining:function(){return active.map(function(idx){return describeIndex(idx);}).filter(Boolean);},
+  markCompleted:function(idx){return markCompletedIndex(idx);},
   restoreCompleted:function(idx){return restoreCompletedIndex(idx);},
   restoreLastCompleted:function(){return restoreLastCompleted();},
   clearCompleted:function(){return clearCompleted();},
-  reloadCompleted:function(){if(manualSpinPhase!=="idle")return false;resetRound(false);return true;}
+  reloadCompleted:function(){if(manualSpinPhase!=="idle")return false;resetRound(false);return true;},
+  applySharedCompleted:function(rows){return applySharedCompleted(rows);}
 };
 
 spinBtn.addEventListener("click",spin);`;
@@ -359,15 +381,13 @@ spinBtn.addEventListener("click",spin);`;
       "./mechanical-motion.js?b="+BUILD,
       "./sw-register.js?b="+BUILD,
       "./profile-manager.js?b="+BUILD,
+      "./shared-progress.js?b="+BUILD,
       "./achievements.js?b="+BUILD
     ];
     const extraTags=extras.map(src=>'<script src="'+src+'"></'+'script>').join("");
 
-    if(app.includes("</body>")){
-      app=app.replace("</body>",extraTags+"</body>");
-    }else{
-      app+=extraTags;
-    }
+    if(app.includes("</body>")) app=app.replace("</body>",extraTags+"</body>");
+    else app+=extraTags;
 
     document.open();
     document.write(app);
