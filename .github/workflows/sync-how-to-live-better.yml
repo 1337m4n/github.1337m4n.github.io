@@ -47,6 +47,12 @@ jobs:
         run: |
           python scripts/patch_hltb_mobile.py \
             "$RUNNER_TEMP/hltb-custom.html" \
+            "$RUNNER_TEMP/hltb-mobile.html"
+
+      - name: Reapply book-like reading theme
+        run: |
+          python scripts/patch_hltb_reading_theme.py \
+            "$RUNNER_TEMP/hltb-mobile.html" \
             "how-to-live-better/index.html"
 
       - name: Commit only when content changed
