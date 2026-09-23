@@ -83,6 +83,7 @@ body{
 }
 
 .bar{
+  background:var(--paper);
   background:color-mix(in srgb,var(--paper) 94%,transparent);
   border-bottom-color:var(--paper-edge);
   box-shadow:0 1px 0 rgba(90,70,45,.035);
@@ -91,6 +92,7 @@ body{
 }
 
 .toc{
+  background:var(--paper-deep);
   background:color-mix(in srgb,var(--paper-deep) 96%,transparent);
   border-right-color:var(--paper-edge);
 }
