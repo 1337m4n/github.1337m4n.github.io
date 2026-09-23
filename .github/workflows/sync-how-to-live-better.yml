@@ -1,0 +1,61 @@
+name: Sync 高性价比人生指南
+
+on:
+  schedule:
+    # 每 6 小时检查一次上游
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-how-to-live-better
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this Pages repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Clone latest reader builder
+        run: git clone --depth 1 https://github.com/cdyforever/how-to-live-better.git "$RUNNER_TEMP/reader"
+
+      - name: Clone latest book content
+        run: git clone --depth 1 https://github.com/eternity4719/HowToLiveBetter.git "$RUNNER_TEMP/book"
+
+      - name: Build latest reading page
+        run: |
+          python "$RUNNER_TEMP/reader/build.py" all \
+            -o "$RUNNER_TEMP/hltb-index.html" \
+            --repo "$RUNNER_TEMP/book"
+
+      - name: Reapply custom collapsible TOC
+        run: |
+          python scripts/patch_hltb.py \
+            "$RUNNER_TEMP/hltb-index.html" \
+            "how-to-live-better/index.html"
+
+      - name: Commit only when content changed
+        run: |
+          set -e
+          if git diff --quiet -- how-to-live-better/index.html; then
+            echo "No upstream changes."
+            exit 0
+          fi
+
+          BOOK_REV="$(git -C "$RUNNER_TEMP/book" rev-parse --short HEAD)"
+          READER_REV="$(git -C "$RUNNER_TEMP/reader" rev-parse --short HEAD)"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add how-to-live-better/index.html
+          git commit -m "chore: sync 高性价比人生指南 $BOOK_REV (reader $READER_REV)"
+          git push
