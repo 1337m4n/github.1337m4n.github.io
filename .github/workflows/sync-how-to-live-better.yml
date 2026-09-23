@@ -41,6 +41,12 @@ jobs:
         run: |
           python scripts/patch_hltb.py \
             "$RUNNER_TEMP/hltb-index.html" \
+            "$RUNNER_TEMP/hltb-custom.html"
+
+      - name: Reapply mobile safe-area and high-refresh adaptations
+        run: |
+          python scripts/patch_hltb_mobile.py \
+            "$RUNNER_TEMP/hltb-custom.html" \
             "how-to-live-better/index.html"
 
       - name: Commit only when content changed
