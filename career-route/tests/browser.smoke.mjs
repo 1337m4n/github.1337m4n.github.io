@@ -103,7 +103,16 @@ try {
   await navigate('home');await page.setViewportSize({width:390,height:844});await page.screenshot({path:join(evidence,'home-mobile.png')});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   assert.equal(external.length,0);assert.deepEqual(errors,[]);
-  console.log(JSON.stringify({passed:true,url,flow:'baseline -> no-change -> derived Offer -> decision -> invalid premises + immutable archive -> encrypted export/import -> calendar -> manual override + recheck -> blocked resignation -> refresh -> mobile',viewports:['1440x1000','390x844'],externalRequests:0,consoleErrors:0,evidence},null,2));
+  const insecurePage=await browser.newPage();
+  await insecurePage.route('http://insecure.example/career-route/**',async route=>{
+    const pathname=new URL(route.request().url()).pathname,file=pathname===prefix+'/' ? 'index.html':pathname.slice(prefix.length+1);
+    if (!allowed.has(file)) return route.fulfill({status:404,body:''});
+    await route.fulfill({status:200,contentType:file.endsWith('.html') ? 'text/html; charset=utf-8':file.endsWith('.css') ? 'text/css':'text/javascript',body:await readFile(new URL('../'+file,import.meta.url))});
+  });
+  await insecurePage.goto('http://insecure.example/career-route/');await insecurePage.getByRole('heading',{name:'需要安全连接'}).waitFor();
+  assert.equal(await insecurePage.locator('#app form').count(),0);assert.equal(await insecurePage.evaluate(()=>localStorage.getItem('career-route:v1')),null);
+  await insecurePage.close();
+  console.log(JSON.stringify({passed:true,url,flow:'baseline -> no-change -> derived Offer -> decision -> invalid premises + immutable archive -> encrypted export/import -> calendar -> manual override + recheck -> blocked resignation -> refresh -> mobile -> insecure-origin blocked',viewports:['1440x1000','390x844'],externalRequests:0,consoleErrors:0,evidence},null,2));
 } finally {
   await browser?.close();await new Promise(resolve=>server.close(resolve));
 }

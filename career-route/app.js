@@ -6,6 +6,7 @@ import { encryptBackup, decodeBackup } from './crypto.mjs';
 
 const app = document.querySelector('#app');
 const toast = document.querySelector('#toast');
+const insecureOrigin = !window.isSecureContext;
 const VIEWS = new Set(['home', 'feedback', 'offers', 'timeline', 'history', 'settings']);
 const FEEDBACK_TABS = ['light', 'major', 'baseline', 'market', 'finance', 'relationship', 'resign'];
 const STATE_LABELS = {
@@ -23,7 +24,7 @@ let feedbackTab = 'light';
 let editingOfferId = null;
 let toastTimer;
 
-try { data = loadData(); } catch (error) { dataError = error; data = createInitialData(); }
+try { if (insecureOrigin) throw new Error('个人数据只能在 HTTPS 或本机安全预览中使用。'); data = loadData(); } catch (error) { dataError = error; data = createInitialData(); }
 
 function todayISO() { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
 function dateLabel(iso) { if (!iso) return '待定'; const [y, m, d] = iso.slice(0, 10).split('-'); return `${Number(y)}年${Number(m)}月${Number(d)}日`; }
@@ -346,6 +347,10 @@ function renderSettings() {
 }
 
 function renderRecovery() {
+  if (insecureOrigin) {
+    app.innerHTML = pageHeader('需要安全连接') + section('暂不能录入个人数据','<p>当前入口不是安全连接。请使用证书有效的 HTTPS 地址；不要绕过浏览器证书警告。原有存档未读取或改写，本页不提供个人数据录入。</p>');
+    return;
+  }
   app.innerHTML = pageHeader('需要恢复本地数据') + `<section class="section"><div class="inline-alert red">检测到本地存档无法读取。为了避免覆盖原记录，系统已停止自动保存。你可以导入先前备份，或在确认旧记录无法恢复后重新开始。</div><div class="form-grid">${input('import-password','加密备份口令','',{type:'password',full:true})}</div><div class="btn-row"><label class="btn btn-primary" for="import-file">导入 JSON 备份</label><input id="import-file" class="visually-hidden" type="file" accept="application/json,.json" /><button class="btn btn-danger" type="button" data-action="clear-data">删除损坏存档并重建</button></div></section>`;
 }
 function render() {
