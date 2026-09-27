@@ -1,0 +1,26 @@
+name: Career route MVP checks
+on:
+  push:
+    branches: [master]
+    paths: ['career-route/**', '.github/workflows/career-route-test.yml']
+  pull_request:
+    paths: ['career-route/**', '.github/workflows/career-route-test.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: career-route
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: npm run build
